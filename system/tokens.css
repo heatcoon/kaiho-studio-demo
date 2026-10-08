@@ -1,0 +1,127 @@
+/* ============================================================================
+   kaiho-studio / system/tokens.css
+   ----------------------------------------------------------------------------
+   デザイントークン（システム層）。
+   ここは「組織に依存しない」値だけを定義する。
+   組織固有の値（色・書体・ロゴ）は brands/<name>/brand.css で上書きする。
+
+   レイヤ構造:
+     1. tokens.css   ← 中立のフォールバック値（このファイル）
+     2. brand.css    ← 組織ごとの上書き（--brand-* のみを触る）
+     3. print.css / components.css ← 意味トークンを消費するだけ
+
+   命名規約:
+     --brand-*   ブランド層で上書きされる想定のトークン
+     --page-*    判型・面付けに関する寸法
+     --fs-* --lh-*  タイポグラフィ
+     --sp-*      余白スケール
+     --c-*       意味づけされた色（brand を参照する）
+   ========================================================================== */
+
+:root {
+  /* ------------------------------------------------------------------------
+     1. ブランド層のフォールバック
+     brands/_template/brand.css をコピーして上書きすること。
+     ここでは「どの団体でもない」中立値を置く（ホワイトラベル既定）。
+     ---------------------------------------------------------------------- */
+  --brand-primary:        #1f4e79;  /* 主色。見出し罫・柱・強調 */
+  --brand-primary-dark:   #143654;  /* 主色の暗部。ベタ面の上の文字など */
+  --brand-primary-light:  #e8eef4;  /* 主色の淡色。地紋・囲み背景 */
+  --brand-accent:         #c0561f;  /* 差し色。多用しないこと */
+  --brand-ink:            #1a1a1a;  /* 本文の墨。真っ黒は避ける */
+  --brand-ink-muted:      #5a5a5a;  /* 補足・キャプション */
+  --brand-rule:           #c8ccd0;  /* 罫線 */
+  --brand-paper:          #ffffff;  /* 紙色 */
+  --brand-paper-tint:     #f4f5f6;  /* 薄地 */
+
+  --brand-font-sans:  "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic Medium",
+                      "Yu Gothic", Meiryo, system-ui, sans-serif;
+  --brand-font-serif: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho",
+                      "YuMincho", "MS PMincho", serif;
+  --brand-font-num:   "Helvetica Neue", Arial, sans-serif;   /* 欧文・数字 */
+
+  /* ロゴはトークンではなく号の HTML の <img class="masthead__logo"> で指定する。
+     カスタムプロパティ内の url() は「使用側のシート」を基準に解決されるため、
+     brand.css からの相対パスが成立しない。詳細は components.css の .masthead__logo。 */
+  --brand-name:         "団体名";
+  --brand-title:        "会報誌タイトル";
+
+  /* ------------------------------------------------------------------------
+     2. 判型（要件11: 現在は A4 のみ。B5/A5 は拡張点を用意するだけ）
+     判型を増やすときは print.css の [data-format] ブロックを追加する。
+     ---------------------------------------------------------------------- */
+  --page-width:   210mm;
+  --page-height:  297mm;
+
+  /* 版面マージン。見開きを想定し、ノド(inner)を広めに取る */
+  --page-margin-top:    20mm;
+  --page-margin-bottom: 18mm;
+  --page-margin-outer:  16mm;
+  --page-margin-inner:  22mm;
+
+  --page-bleed:     3mm;   /* 塗り足し。data-bleed="on" のときだけ効く */
+  --page-safe:      5mm;   /* 裁ち落とし安全域。ガイド表示用 */
+
+  /* 段組。12分割を基本とし、テンプレートは 1/2/3 段を組み合わせる */
+  --grid-columns: 12;
+  --grid-gutter:  6mm;
+  --baseline:     4.4mm;   /* ベースライングリッド（本文 10.5pt × 1.75 相当） */
+
+  /* ------------------------------------------------------------------------
+     3. タイポグラフィ
+     印刷物なので pt を基準にする。アクセシビリティ下限は docs/05 を参照。
+     ---------------------------------------------------------------------- */
+  --fs-display: 28pt;
+  --fs-h1:      20pt;
+  --fs-h2:      15pt;
+  --fs-h3:      12pt;
+  --fs-lead:    12pt;   /* リード文 */
+  --fs-body:  10.5pt;   /* 本文。これを下回らないこと */
+  --fs-small:    9pt;   /* 注記 */
+  --fs-caption:  8.5pt; /* 図版キャプション。可読下限 */
+
+  --lh-tight:   1.35;
+  --lh-heading: 1.45;
+  --lh-body:    1.75;   /* 和文本文の既定 */
+  --lh-loose:   1.9;
+
+  --ls-heading: 0.02em;
+  --ls-body:    0.01em;
+
+  /* ------------------------------------------------------------------------
+     4. 余白スケール（4mm を単位とする等比＋線形の折衷）
+     ---------------------------------------------------------------------- */
+  --sp-1:  1mm;
+  --sp-2:  2mm;
+  --sp-3:  3mm;
+  --sp-4:  4mm;
+  --sp-6:  6mm;
+  --sp-8:  8mm;
+  --sp-12: 12mm;
+  --sp-16: 16mm;
+  --sp-24: 24mm;
+
+  /* ------------------------------------------------------------------------
+     5. 意味づけされた色（コンポーネントはこちらだけを使う）
+     ---------------------------------------------------------------------- */
+  --c-text:          var(--brand-ink);
+  --c-text-muted:    var(--brand-ink-muted);
+  --c-text-invert:   #ffffff;
+  --c-heading:       var(--brand-primary-dark);
+  --c-accent:        var(--brand-accent);
+  --c-rule:          var(--brand-rule);
+  --c-rule-strong:   var(--brand-primary);
+  --c-surface:       var(--brand-paper);
+  --c-surface-tint:  var(--brand-paper-tint);
+  --c-surface-brand: var(--brand-primary);
+  --c-surface-brand-light: var(--brand-primary-light);
+
+  /* ------------------------------------------------------------------------
+     6. 罫・角丸（印刷では角丸を使いすぎない）
+     ---------------------------------------------------------------------- */
+  --rule-hairline: 0.25mm;
+  --rule-thin:     0.4mm;
+  --rule-thick:    1.2mm;
+  --radius-sm:     1mm;
+  --radius-md:     2mm;
+}

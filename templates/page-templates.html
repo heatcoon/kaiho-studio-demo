@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ja" data-format="A4">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ページテンプレート見本帳</title>
+<link rel="stylesheet" href="../system/tokens.css">
+<link rel="stylesheet" href="../brands/default/brand.css">
+<link rel="stylesheet" href="../system/print.css">
+<link rel="stylesheet" href="../system/components.css">
+<link rel="stylesheet" href="../system/editor.css">
+<!-- page-templates.js だけを読み、editor.js は読まない。
+     ツールバーや検査が動くと見本帳ではなく編集画面になってしまうため
+     （gallery.html とはここが違う。docs/10-page-templates.md 参照）。 -->
+<script src="../system/page-templates.js" defer></script>
+<style>
+  /* 見本帳だけで使う注記のスタイル。gallery.html と同じくページ内 <style> で持つ
+     （system/ の CSS には触れない）。.page の外に置く見出し・諸元・目次注記だけに使う。
+     実際の号ではこの style ブロックごと不要です。
+
+     文字色（--c-heading 等）は「紙の上に置く」前提で、docs/05 のコントラスト表も
+     それを基準にしている。editor.css の作業台の地色（#6b6f76、濃いグレー）に
+     直接乗せると文字色が沈んで読めなくなる（実測 3.45:1、本文基準の 4.5:1 未達）。
+     文字色を作業台向けに作り直すのではなく、.page と同じ紙面の地色（--c-surface）を
+     背景に敷いて「紙の上」を保証する（docs/05 の基準がそのまま成り立つ）。 */
+  .tmpl-note, .tmpl-intro {
+    max-width: 210mm;
+    margin: var(--sp-4) auto;
+    padding: var(--sp-4) var(--sp-6);
+    background: var(--c-surface);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  }
+  .tmpl-note__label {
+    font-size: var(--fs-h2);
+    font-weight: 700;
+    color: var(--c-heading);
+  }
+  .tmpl-note__spec {
+    font-family: var(--brand-font-num);
+    font-size: 8.5pt;
+    color: var(--c-accent);
+    display: block;
+    margin-top: var(--sp-1);
+  }
+  .tmpl-note__toc {
+    font-size: 8.5pt;
+    color: var(--c-text-muted);
+    display: block;
+    margin-top: var(--sp-1);
+    font-style: italic;
+  }
+  @media print {
+    /* 注記は制作の参考情報であって紙面そのものではないので印刷しない。
+       .page だけを刷れば、テンプレートの現物 = 実際にできる紙面がそのまま出る。 */
+    .tmpl-note, .tmpl-intro { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ========================================================================
+     この見本帳は「ページテンプレートの全リスト」です。
+     system/page-templates.js の window.KAIHO_PAGE_TEMPLATES から、このページを
+     開くたびに実行時に組み立てています（静的に書き写すと定義と見本帳が
+     食い違うため。CLAUDE.md の「見本帳に無い部品は存在しないのと同じ」）。
+
+     「号テンプレート」（templates/basic-4p.html など、号まるごと）とは別物です。
+     ここにあるのは「記事 1 本ぶんの雛型」で、編集計画の記事が1つ選ぶことで
+     紙面に組み込まれます（docs/10-page-templates.md、docs/02-templates.md）。
+
+     .page は A4 の版面そのものの再現専用で、注記の入れ物ではありません。
+     見出し・諸元・目次注記はすべて .page の外（tmpl-note）に置きます。
+     ここに .page が増えると、見本帳を印刷したときに中身の無い紙が混ざります。
+     ===================================================================== -->
+
+<div class="tmpl-intro">
+  <p class="t-lead">
+    編集計画の記事が選ぶ「ページテンプレート」の一覧です。
+    各テンプレートの見出し・諸元の直後に、実際に組み上がる紙面をそのまま並べています。
+    ここに無いテンプレートは存在しません（system/page-templates.js を追加・変更したら
+    必ずこの見本帳が最新のテンプレートを表示することを確認してください）。
+  </p>
+  <p class="t-body">
+    諸元の意味: <strong>占有ページ数</strong>（テンプレートの既定ページ数）／
+    <strong>fixed</strong>（置ける位置。先頭固定・末尾固定・自由）／
+    <strong>once</strong>（号にひとつだけか）／
+    <strong>toc</strong>（表紙の目次に載るか）。
+  </p>
+</div>
+
+<div id="tmpl-root"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  function $(sel, root) { return (root || document).querySelector(sel); }
+
+  function el(tag, attrs, children) {
+    var node = document.createElement(tag);
+    if (attrs) {
+      Object.keys(attrs).forEach(function (k) {
+        if (k === "text") { node.textContent = attrs[k]; }
+        else { node.setAttribute(k, attrs[k]); }
+      });
+    }
+    (children || []).forEach(function (c) { node.appendChild(c); });
+    return node;
+  }
+
+  /* pageAttrs[pageIndex] が無ければ配列の最後の要素を使う。
+     composePage() (system/editor.js) と同じ契約（page-templates.js 冒頭のコメント）。 */
+  function attrsFor(tmpl, pageIndex) {
+    var list = tmpl.pageAttrs || [];
+    return list[pageIndex] || list[list.length - 1] || {};
+  }
+
+  /* テンプレート 1 枚ぶんの .page を組み立てる。
+     system/editor.js の composePage() と同じやり方（markup + pageAttrs）で、
+     ツールバー・検査は使わないのでその部分だけを手で再現している。
+     .page の中に入れるのは版面の中身（page__body / page__runhead / page__folio）だけ。 */
+  function buildPage(tmpl, pageIndex) {
+    var attrs = attrsFor(tmpl, pageIndex);
+    var page = el("section", { "class": "page" });
+    if (attrs.folio === "none") { page.setAttribute("data-folio", "none"); }
+
+    var body = el("div", { "class": "page__body" });
+    body.innerHTML = tmpl.markup(tmpl.id, pageIndex);
+    page.appendChild(body);
+
+    var runhead = el("span", { "class": "page__runhead" });
+    runhead.textContent = attrs.runhead || "";
+    page.appendChild(runhead);
+
+    page.appendChild(el("span", { "class": "page__folio" }));
+
+    return page;
+  }
+
+  function fixedLabel(v) {
+    if (v === "first") { return "先頭固定"; }
+    if (v === "last") { return "末尾固定"; }
+    return "自由"; /* null */
+  }
+
+  /* テンプレートの見出し・諸元・（cover のみ）目次注記。.page の外に置く。 */
+  function buildNote(tmpl) {
+    var note = el("div", { "class": "tmpl-note" });
+
+    note.appendChild(el("span", { "class": "tmpl-note__label",
+      text: tmpl.label + "（" + tmpl.id + "）" }));
+
+    var spec = el("span", { "class": "tmpl-note__spec" });
+    spec.textContent =
+      "占有ページ数 " + tmpl.pages + " / 置ける位置 " + fixedLabel(tmpl.fixed) +
+      " / 号にひとつだけ " + (tmpl.once ? "はい" : "いいえ") +
+      " / 目次に載る " + (tmpl.toc ? "はい" : "いいえ");
+    note.appendChild(spec);
+
+    if (tmpl.id === "cover") {
+      var tocNote = el("span", { "class": "tmpl-note__toc" });
+      tocNote.textContent =
+        "目次は renderToc() が編集計画から自動生成します（docs/10 §5）。ここでは空です。";
+      note.appendChild(tocNote);
+    }
+
+    return note;
+  }
+
+  function render() {
+    var root = $("#tmpl-root");
+    var templates = (window.KAIHO_PAGE_TEMPLATES || []);
+
+    if (!templates.length) {
+      root.appendChild(el("p", { "class": "tmpl-intro t-body", text:
+        "window.KAIHO_PAGE_TEMPLATES が空です。system/page-templates.js が正しく読み込まれているか確認してください。" }));
+      return;
+    }
+
+    templates.forEach(function (tmpl) {
+      root.appendChild(buildNote(tmpl));
+      /* 実際の紙面。占有ページ数ぶん、markup(id, pageIndex) から組む */
+      for (var i = 0; i < tmpl.pages; i++) {
+        root.appendChild(buildPage(tmpl, i));
+      }
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", render);
+  } else {
+    render();
+  }
+})();
+</script>
+
+</body>
+</html>

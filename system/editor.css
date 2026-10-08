@@ -1,0 +1,1097 @@
+/* ============================================================================
+   kaiho-studio / system/editor.css
+   ----------------------------------------------------------------------------
+   校正用プレビューの「作業台」まわり（要件9、docs/00 決定 14）。
+
+   重要な制約:
+     このファイルは @media screen の中だけで完結する。
+     版面に関わる寸法は一切ここで書かない（print.css・components.css の責務）。
+     → 画面で見えている紙面は、印刷結果と同じ CSS で組まれている。
+     記事の割合（.article--block の --share）の規則も紙面そのものなので、
+     ここではなく components.css にある。
+   ========================================================================== */
+
+@media screen {
+
+  /* --- 作業台 -------------------------------------------------------------- */
+  body {
+    background: #6b6f76;
+    padding: calc(var(--bar-h, 44px) + 24px) 24px 64px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    transition: padding 0.15s;
+  }
+
+  .page,
+  .plan-sheet {
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
+    flex: none;
+  }
+
+  body[data-view="plan"] .page { display: none; }
+
+  /* 見開き（決定4: data-spread に分離。data-view とはもう共有しない） */
+  body[data-spread="on"]:not([data-view="plan"]) {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: center;
+    gap: 24px 0;
+  }
+  body[data-spread="on"]:not([data-view="plan"]) .page:first-of-type { grid-column: 2; }
+
+  body { --zoom: 1; }
+  .page { transform: scale(var(--zoom)); transform-origin: top center; }
+  .page { margin-bottom: calc((var(--zoom) - 1) * var(--page-height)); }
+
+  /* --- ツールバー（決定 5・14: 号・工程・状態だけ。折り返し可） ------------- */
+  .editor-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #22252a;
+    color: #e8eaed;
+    font: 13px/1.4 system-ui, sans-serif;
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.4);
+  }
+  .editor-bar__title { font-weight: 700; margin-right: 4px; white-space: nowrap; }
+  .editor-bar__sep { width: 1px; height: 20px; background: #454a52; flex: none; }
+  .editor-bar__spacer { flex: 1 1 12px; min-width: 8px; }
+
+  .editor-bar button,
+  .editor-bar select {
+    font: inherit;
+    color: #e8eaed;
+    background: #343941;
+    border: 1px solid #4a5058;
+    border-radius: 4px;
+    padding: 5px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .editor-bar button:hover,
+  .editor-bar select:hover { background: #414751; }
+  .editor-bar button[aria-pressed="true"] {
+    background: #3d7fd6;
+    border-color: #5b9af0;
+    color: #fff;
+  }
+  .editor-bar button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .editor-bar__status { font-size: 12px; color: #9aa1ab; white-space: nowrap; }
+  .editor-bar__status[data-mismatch="true"] { color: #ffc46b; font-weight: 700; }
+
+  #kaiho-checkbadge[data-alert="true"] { color: #ff9d7a; border-color: #7a4a3d; }
+
+  .editor-bar__toast {
+    font-size: 12px;
+    color: #ffc46b;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .editor-bar__toast[data-show="true"] { opacity: 1; }
+
+  /* --- 編集モード ------------------------------------------------------------ */
+  body[data-mode="edit"] [contenteditable="true"]:hover {
+    outline: 1px dashed rgba(61, 127, 214, 0.5);
+    outline-offset: 2px;
+  }
+  body[data-mode="edit"] [contenteditable="true"]:focus {
+    outline: 2px solid #3d7fd6;
+    outline-offset: 2px;
+    background: rgba(61, 127, 214, 0.05);
+  }
+
+  /* --- ガイド表示 ------------------------------------------------------------ */
+  .page__guides {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: none;
+    z-index: 50;
+  }
+  body[data-guides="on"] .page__guides { display: block; }
+
+  .page__guides::before {
+    content: "";
+    position: absolute;
+    top: var(--page-margin-top);
+    bottom: var(--page-margin-bottom);
+    left: var(--page-margin-inner);
+    right: var(--page-margin-outer);
+    outline: 1px solid rgba(0, 160, 255, 0.55);
+  }
+  .page:nth-of-type(even) .page__guides::before {
+    left: var(--page-margin-outer);
+    right: var(--page-margin-inner);
+  }
+  .page__guides::after {
+    content: "";
+    position: absolute;
+    inset: var(--page-safe);
+    outline: 1px dashed rgba(255, 80, 80, 0.5);
+  }
+
+  /* --- 溢れ警告（決定6: ページ道具と同じ角を避け、左上へ。mm を出す） --------- */
+  .page[data-overflow="true"] { box-shadow: 0 0 0 3px #e4572e, 0 2px 16px rgba(0, 0, 0, .35); }
+  /* ::before は下の「p.N」ラベルが使っているので ::after を使う。
+     （同じ疑似要素に 2 つ書くと後勝ちで、警告が出なくなる） */
+  .page[data-overflow="true"]::after {
+    content: attr(data-overflow-label);
+    position: absolute;
+    top: 0; left: 0;
+    background: #e4572e;
+    color: #fff;
+    font: 700 11px/1 system-ui, sans-serif;
+    padding: 5px 8px;
+    z-index: 60;
+  }
+
+  /* --- 決定13: 「続きへ送る／続きから戻す」ボタン（紙面側） ------------------
+     溢れ警告のすぐ下に置く。ページ道具（右上）とは重ならない角にする。
+     押したときだけ動く（自動では絶対に走らせない）。送る・戻すの両方が
+     出ることがあるので、1つの箱にまとめて縦に並べる（決定11時代は
+     ボタン自身が絶対配置だったが、2つ出ると重なるため箱ごと配置する形に変えた）。 */
+  .continuation-controls {
+    position: absolute;
+    top: 26px; left: 0;
+    z-index: 61;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 60%;
+  }
+  .frame-reflow {
+    font: 700 11px/1.3 system-ui, sans-serif;
+    color: #fff;
+    background: #a85d1f;
+    border: 1px solid #d4832f;
+    border-radius: 3px;
+    padding: 5px 8px;
+    cursor: pointer;
+    text-align: left;
+  }
+  .frame-reflow:hover { background: #c06e24; }
+  /* 「戻す」は送るの逆向きなので、色相を変えて向きの違いを見せる */
+  .frame-reflow--back { background: #2f5f8a; border-color: #3d7fbf; }
+  .frame-reflow--back:hover { background: #386f9e; }
+
+  /* --- 決定12: 記事の境目のドラッグ用ハンドル（紙面側） -----------------------
+     作業台の道具なので editor.css に置く。serialize() が除去する。 */
+  .share-handle {
+    position: absolute;
+    left: 0; right: 0;
+    height: 12px;
+    margin-top: -6px;
+    z-index: 65;
+    cursor: row-resize;
+    background: transparent;
+  }
+  .share-handle::before {
+    content: "";
+    position: absolute;
+    left: 8px; right: 8px; top: 5px;
+    height: 2px;
+    background: rgba(61, 127, 214, 0.55);
+    border-radius: 1px;
+  }
+  .share-handle:hover::before,
+  .share-handle:active::before { background: #3d7fd6; }
+
+  /* --- 決定15: 担当で絞る（他の担当の記事・ページをグレーアウト） -------------
+     隠さずに薄くする。ページを消すとノンブル・左右（ノド側）・見開きが読めなくなり、
+     同じページの隣の記事（自分の取り分を決めている相手）も見えなくなるため。
+     .article は display: contents で箱を持たないので、記事そのものではなく
+     その子に効かせる（contents の要素に opacity を当てても何も起きない）。
+     画面だけの話なので印刷には一切出ない（このファイルは @media screen の中）。 */
+  .article[data-focus="other"] > * {
+    opacity: 0.28;
+    filter: grayscale(1);
+    pointer-events: none;
+    user-select: none;
+  }
+  /* 自分の記事が1本も無いページは、ページごと幕を掛ける。
+     幕がクリックを受け止めるので、伏せたページの中は触れない */
+  .page[data-focus="other"] > :not(.focus-veil) { opacity: 0.28; filter: grayscale(1); }
+  .focus-veil {
+    position: absolute;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 40%;
+    background: rgba(107, 111, 118, 0.35);
+    cursor: not-allowed;
+  }
+  .focus-veil__label {
+    font: 700 13px/1.4 system-ui, sans-serif;
+    color: #fff;
+    background: rgba(34, 37, 42, 0.85);
+    padding: 6px 12px;
+    border-radius: 14px;
+    transform: scale(calc(1 / var(--zoom, 1)));
+  }
+  /* パネル側（工程マス目の行・記事カード・枠カード）も同じく薄くする。
+     ただし編集はできるまま。計画は編集長のもので（09 §2）、絞り込みは
+     見え方であって権限ではない（決定15）。触ろうとしたら普段の濃さに戻す */
+  .stage-grid tr[data-focus="other"],
+  .article-card[data-focus="other"],
+  .frame-card[data-focus="other"] > .frame-card__head,
+  .frame-card[data-focus="other"] > label {
+    opacity: 0.35;
+    transition: opacity 0.12s;
+  }
+  .stage-grid tr[data-focus="other"]:hover,
+  .stage-grid tr[data-focus="other"]:focus-within,
+  .article-card[data-focus="other"]:hover,
+  .article-card[data-focus="other"]:focus-within { opacity: 1; }
+  .article-card[data-focus="mine"] { box-shadow: inset 3px 0 0 #3d7fd6; }
+
+  /* 境目のドラッグは隣の記事の割合も動かす（決定12）。担当者の視点では
+     他人の取り分を触ることになるので、絞り込み中は出さない */
+  body[data-focus="on"] .share-handle { display: none; }
+  .page[data-focus="other"] .page-tools,
+  .page[data-focus="other"] .continuation-controls { display: none; }
+
+  /* --- ページ道具（右上。計画の工程で編集長にだけ出る。記事チップ・✕・＋ 記事） */
+  .page-tools {
+    position: absolute;
+    top: 0; right: 0;
+    z-index: 70;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 4px;
+    max-width: 70%;
+    padding: 4px 6px;
+    background: rgba(34, 37, 42, 0.92);
+    border-bottom-left-radius: 6px;
+    font: 11px/1.4 system-ui, sans-serif;
+    color: #e8eaed;
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+  .page:hover .page-tools,
+  .page-tools:focus-within,
+  body[data-mode="edit"] .page-tools { opacity: 1; }
+
+  .page-tools__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 4px 2px 7px;
+    background: #3d5a80;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+  .page-tools__chip[data-orphan="true"] { background: #7a3d3d; }
+
+  .page-tools__drop {
+    font: inherit;
+    line-height: 1;
+    color: #d7dde6;
+    background: none;
+    border: 0;
+    padding: 2px 3px;
+    cursor: pointer;
+  }
+  .page-tools__drop:hover { color: #fff; background: rgba(255, 255, 255, 0.18); border-radius: 8px; }
+
+  .page::before {
+    content: "p." counter(folio);
+    position: absolute;
+    top: -20px; left: 0;
+    font: 11px/1 system-ui, sans-serif;
+    color: #c9ced6;
+  }
+
+  /* --- 右側パネル（決定 5: 高さは --bar-h から） ------------------------------ */
+  .editor-panel {
+    /* 判定4: 担当者列の出し入れを幅そのもので決めるため、パネルを問い合わせ単位にする。
+       画面幅ではなくパネル幅で切り替わるので、可変幅と噛み合う */
+    container-type: inline-size;
+    container-name: panel;
+    position: fixed;
+    top: var(--bar-h, 44px); right: 0; bottom: 0;
+    width: var(--panel-w, 380px);
+    z-index: 90;
+    display: none;
+    flex-direction: column;
+    background: #2a2e34;
+    color: #e8eaed;
+    font: 13px/1.6 system-ui, sans-serif;
+    border-left: 1px solid #454a52;
+  }
+  .editor-panel[data-open="true"] { display: flex; }
+  body:has(.editor-panel[data-open="true"]) { padding-right: calc(var(--panel-w, 380px) + 24px); }
+
+  .editor-panel__content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+
+  .editor-panel h2 {
+    font-size: 13px;
+    color: #9aa1ab;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 20px 0 8px;
+  }
+  .editor-panel h2:first-child { margin-top: 0; }
+
+  .editor-panel label {
+    display: block;
+    margin-bottom: 10px;
+    color: #b8bec7;
+  }
+  .editor-panel input[type="text"],
+  .editor-panel input[type="date"],
+  .editor-panel input[type="number"],
+  .editor-panel select {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 3px;
+    padding: 5px 7px;
+    font: inherit;
+    color: #e8eaed;
+    background: #1d2025;
+    border: 1px solid #4a5058;
+    border-radius: 4px;
+  }
+
+  .panel-note { font-size: 12px; color: #9aa1ab; margin: 6px 0 12px; }
+
+  .panel-check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 10px 0 4px;
+    cursor: pointer;
+  }
+  .panel-check input { width: auto; margin: 0; }
+
+  /* --- 決定11: 枠カード（記事カードの親） ------------------------------------
+     ページを占有するのは枠。ページテンプレート・占有ページ数は枠が持ち、
+     その中に記事カード（割合・担当・締切）を並べる。 */
+  .frame-card {
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    background: #1d2025;
+    border: 1px solid #454a52;
+    border-radius: 8px;
+  }
+  .frame-card__head { margin-bottom: 8px; display: flex; align-items: baseline; gap: 8px; }
+  .frame-card__title { font-weight: 700; color: #e8eaed; }
+  .frame-card__implicit { font-size: 11px; color: #9aa1ab; }
+
+  /* --- 記事カード ------------------------------------------------------------ */
+  .article-card {
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    background: #23262c;
+    border: 1px solid #3d434c;
+    border-radius: 6px;
+  }
+  .article-card__head { margin-bottom: 8px; }
+  .article-card__place { font-size: 12px; color: #9aa1ab; }
+  .article-card__dates summary { cursor: pointer; color: #9aa1ab; font-size: 12px; margin: 6px 0; }
+  /* 枠カードの中に入る記事カードは、枠のものより一段沈める */
+  .article-card--nested { margin-left: 6px; background: #262a30; }
+  /* 決定13: 「続き」は割合しか持たない簡略カード。左に破線を足して、
+     親のカードにぶら下がっている（担当者などの欄が無いのは省略ではなく
+     そもそも持たない）ことを見せる */
+  .article-card--continuation {
+    margin-left: 18px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    border-left: 2px dashed #4a5058;
+  }
+  .article-card--continuation .article-card__place { font-style: italic; }
+
+  /* --- 決定12: 割合コントロール（プリセット + 細かく調整） ------------------- */
+  .share-control__detail {
+    margin: 6px 0 10px;
+    padding: 8px 10px;
+    background: #1d2025;
+    border: 1px solid #3d434c;
+    border-radius: 6px;
+  }
+  .share-control__detail summary { cursor: pointer; color: #e8eaed; font-size: 12px; font-weight: 700; }
+  .share-control__range {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .share-control__range input[type="range"] { flex: 1; width: auto; margin-top: 0; }
+  .share-control__value { min-width: 3.5em; text-align: right; color: #e8eaed; }
+
+  /* --- 工程マス目（決定 1・8。校正の工程のパネルに置く） ---------------------- */
+  .stage-grid-wrap { margin-bottom: 20px; }
+
+  .stage-grid {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+  .stage-grid th {
+    text-align: left;
+    font-weight: 400;
+    color: #9aa1ab;
+    padding: 4px 6px;
+    border-bottom: 1px solid #454a52;
+    white-space: nowrap;
+  }
+  .stage-grid__title, .stage-grid__owner {
+    padding: 6px;
+    border-bottom: 1px solid #383d45;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .stage-grid__owner span[data-missing="true"] { color: #ff9d7a; font-weight: 700; }
+
+  .stage-grid__cell {
+    text-align: center;
+    padding: 4px 6px;
+    border-bottom: 1px solid #383d45;
+    border-left: 1px solid #383d45;
+    cursor: pointer;
+    user-select: none;
+  }
+  .stage-grid__cell:hover { background: rgba(255, 255, 255, 0.06); }
+  .stage-grid__dot {
+    display: block;
+    width: 10px; height: 10px;
+    margin: 0 auto 3px;
+    border-radius: 50%;
+    background: #4a5058;
+  }
+  .stage-grid__cell[data-state="done"]    .stage-grid__dot { background: #4caf7d; }
+  .stage-grid__cell[data-state="current"] .stage-grid__dot { background: #ffc46b; }
+  .stage-grid__cell[data-state="overdue"] .stage-grid__dot { background: #e4572e; }
+
+  /* 決定11: 枠ごとの小見出し行。記事の行をまとめて読みやすくする */
+  .stage-grid__frame-row td {
+    padding: 8px 6px 3px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #9aa1ab;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px dashed #383d45;
+    background: none;
+  }
+  .stage-grid__due { color: #9aa1ab; font-size: 11px; }
+  .stage-grid__cell[data-state="overdue"] .stage-grid__due { color: #ff9d7a; }
+
+  .stage-grid__footer { font-size: 12px; }
+  .stage-grid__ready {
+    color: #4caf7d;
+    font-weight: 700;
+    padding: 6px 8px;
+    background: rgba(76, 175, 125, 0.12);
+    border: 1px solid rgba(76, 175, 125, 0.4);
+    border-radius: 4px;
+  }
+
+  /* 判定4: 既定の 380px では担当者列まで置くと「校了」列が横スクロールの外へ出る。
+     狭いあいだは担当者列を落とし、未設定だけ記事名の側で示す。
+     パネルを 460px 以上に広げると下の @container で担当者列が戻る。 */
+  .editor-panel .stage-grid th:nth-child(2),
+  .editor-panel .stage-grid__owner { display: none; }
+  .editor-panel .stage-grid__title { max-width: 92px; }
+  /* 記事名は省略記号で切れるので、印は末尾ではなく先頭に置く（末尾だと隠れる） */
+  .editor-panel .stage-grid__title[data-owner-missing="true"]::before {
+    content: "⚠ ";
+    color: #ff9d7a;
+    font-weight: 700;
+  }
+  .editor-panel .stage-grid__title[data-owner-missing="true"] { color: #ff9d7a; }
+  .editor-panel .stage-grid__cell { padding: 4px 3px; }
+  .editor-panel .stage-grid__due { font-size: 10px; }
+
+  /* 幅が足りたら担当者列を戻し、記事名の側の ⚠ は下げる（担当者欄に出るので二重になる） */
+  @container panel (min-width: 460px) {
+    .editor-panel .stage-grid th:nth-child(2),
+    .editor-panel .stage-grid__owner { display: table-cell; }
+    .editor-panel .stage-grid__title { max-width: 130px; }
+    .editor-panel .stage-grid__title[data-owner-missing="true"]::before { content: none; }
+    .editor-panel .stage-grid__title[data-owner-missing="true"] { color: inherit; }
+  }
+
+  /* --- パネルの幅つまみ（判定4） ------------------------------------------- */
+  .editor-panel__resizer {
+    position: absolute;
+    left: -3px; top: 0; bottom: 0;
+    width: 7px;
+    cursor: col-resize;
+    z-index: 1;
+    touch-action: none;
+  }
+  .editor-panel__resizer::before {
+    content: "";
+    position: absolute;
+    left: 3px; top: 0; bottom: 0;
+    width: 1px;
+    background: transparent;
+  }
+  .editor-panel__resizer:hover::before,
+  .editor-panel__resizer:focus-visible::before,
+  body[data-resizing="true"] .editor-panel__resizer::before { background: #3d7fd6; }
+  .editor-panel__resizer:focus-visible { outline: none; }
+
+  /* ドラッグ中に本文や紙面が選択されると、掴んだ手応えが崩れる */
+  body[data-resizing="true"] { user-select: none; cursor: col-resize; }
+
+  /* --- 検査結果 ---------------------------------------------------------- */
+  .check-list { list-style: none; margin: 0; padding: 0; }
+  .check-list li {
+    padding: 7px 0 7px 20px;
+    border-bottom: 1px solid #383d45;
+    position: relative;
+    font-size: 12px;
+  }
+  .check-list li::before { position: absolute; left: 0; top: 7px; }
+  .check-list li[data-level="ok"]::before    { content: "\2713"; color: #4caf7d; }
+  .check-list li[data-level="warn"]::before  { content: "\26A0"; color: #ffc46b; }
+  .check-list li[data-level="error"]::before { content: "\2715"; color: #e4572e; }
+  .check-list a { color: #7fb2f0; cursor: pointer; }
+
+  /* ==========================================================================
+     工程と役割（docs/00 決定 14）
+     ========================================================================== */
+
+  /* --- ツールバー: 号・工程・状態だけ ---------------------------------------- */
+  .editor-bar__issue { color: #c9ced6; white-space: nowrap; }
+  .editor-bar__settings { white-space: nowrap; }
+  #kaiho-checkbadge[data-alert="true"] { color: #ff9d7a; border-color: #7a3d3d; }
+
+  .step-bar { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+  .step-bar__arrow { color: #6f7680; padding: 0 2px; }
+  .editor-bar .step-bar__step {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px 5px 6px;
+    border-radius: 999px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #c9ced6;
+  }
+  .editor-bar .step-bar__step:hover { background: #343941; }
+  .editor-bar .step-bar__step[aria-current="step"] {
+    background: #34537a; border-color: #5b87c0; color: #fff;
+  }
+  .step-bar__no {
+    width: 20px; height: 20px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    border: 1px solid currentColor;
+  }
+  .step-bar__step[data-done="true"] .step-bar__no { background: #4caf7d; border-color: #4caf7d; color: #10261b; }
+  .step-bar__label { font-weight: 700; }
+  .step-bar__sub { font-size: 11px; color: #9aa1ab; }
+  .step-bar__step[aria-current="step"] .step-bar__sub { color: #cfe0f5; }
+  /* 号の状態から見た「いまの工程」。選んでいる工程と違うときだけ印が意味を持つ */
+  .step-bar__step[data-suggested="true"]:not([aria-current="step"]) .step-bar__label::after {
+    content: "（いま）"; font-weight: 400; color: #ffc46b; font-size: 11px;
+  }
+
+  /* --- 見え方の道具: 紙面の左下 -------------------------------------------- */
+  .view-dock {
+    position: fixed; left: 16px; bottom: 16px; z-index: 95;
+    display: flex; gap: 6px; align-items: center;
+    padding: 6px 8px;
+    background: rgba(34, 37, 42, 0.92);
+    border-radius: 8px;
+    font: 12px/1.4 system-ui, sans-serif;
+  }
+  .view-dock button, .view-dock select {
+    font: inherit; color: #e8eaed; background: #343941;
+    border: 1px solid #4a5058; border-radius: 5px; padding: 4px 8px; cursor: pointer;
+  }
+  .view-dock button[aria-pressed="true"] { background: #34537a; border-color: #5b87c0; }
+  .view-dock button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* --- パネル: いまの工程の中身だけ ----------------------------------------- */
+  .editor-panel { display: flex; }
+  body:not([data-settings]):has(.editor-panel) { padding-right: calc(var(--panel-w, 380px) + 24px); }
+  .editor-panel__content { padding-bottom: 24px; }
+
+  .panel-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+  .panel-head h1 { margin: 0; font-size: 18px; color: #fff; }
+  .panel-head__who { font-size: 12px; color: #9aa1ab; }
+
+  .next-box {
+    margin-bottom: 14px; padding: 10px 12px;
+    background: #1d2a3a; border: 1px solid #34537a; border-radius: 8px;
+  }
+  .next-box__label { font-size: 11px; color: #9fbbe0; margin-bottom: 4px; }
+  .next-box__item { margin: 4px 0; padding-left: 16px; position: relative; font-weight: 700; }
+  .next-box__item::before { content: "→"; position: absolute; left: 0; color: #7fb2f0; }
+  .next-box__item[data-level="error"]::before { content: "!"; color: #e4572e; }
+  .next-box__item[data-level="warn"]::before { content: "!"; color: #ffc46b; }
+  .next-box__item[data-level="ok"]::before { content: "\2713"; color: #4caf7d; }
+  .next-box__item[data-link="true"] { cursor: pointer; text-decoration: underline dotted #6f7680; }
+  .next-box__more { margin: 4px 0 0; font-size: 12px; color: #9aa1ab; }
+
+  .panel-lock {
+    margin: 0 0 14px; padding: 8px 10px;
+    font-size: 12px; color: #e8eaed;
+    background: #2f2a22; border: 1px solid #6b5a33; border-radius: 6px;
+  }
+  .panel-lock::before { content: "閲覧のみ　"; color: #ffc46b; font-weight: 700; }
+  [data-readonly="true"] input, [data-readonly="true"] select, [data-readonly="true"] textarea { opacity: 0.7; }
+
+  .panel-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .panel-row .panel-note { margin: 0; }
+
+  .seg { display: inline-flex; border: 1px solid #4a5058; border-radius: 6px; overflow: hidden; }
+  .seg button {
+    font: 12px/1.4 system-ui, sans-serif; color: #c9ced6; background: transparent;
+    border: 0; padding: 4px 10px; cursor: pointer;
+  }
+  .seg button + button { border-left: 1px solid #4a5058; }
+  .seg button[aria-pressed="true"] { background: #34537a; color: #fff; }
+
+  .panel-section { margin: 0 0 10px; border-top: 1px solid #3d434c; padding-top: 8px; }
+  .panel-section > summary {
+    cursor: pointer; font-weight: 700; font-size: 13px; color: #e8eaed; margin-bottom: 8px;
+  }
+  .panel-section--sub { border-top: 0; padding-top: 0; margin-left: 4px; }
+  .panel-section--sub > summary { font-weight: 400; color: #c9ced6; font-size: 12px; }
+
+  .panel-btn {
+    display: block; width: 100%; margin: 6px 0;
+    font: 12px/1.4 system-ui, sans-serif; color: #e8eaed;
+    background: #343941; border: 1px dashed #5b626c; border-radius: 6px;
+    padding: 6px 10px; cursor: pointer; text-align: left;
+  }
+
+  /* 出口: その工程の成果物。パネルの下端に固定して、いつでも見える */
+  .editor-panel__exit {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 12px 16px;
+    border-top: 1px solid #454a52;
+    background: #24282e;
+  }
+  .editor-panel__exit:empty { display: none; }
+  .exit-btn {
+    flex: 1 1 auto;
+    font: 700 13px/1.4 system-ui, sans-serif;
+    color: #fff; background: #3d6aa3; border: 1px solid #5b87c0; border-radius: 6px;
+    padding: 8px 12px; cursor: pointer;
+  }
+  .exit-btn:hover { background: #466f9f; }
+  .exit-btn--secondary { background: #343941; border-color: #4a5058; font-weight: 400; }
+  .exit-btn[data-ready="false"] { background: #3a3f47; border-color: #6b5a33; }
+  .exit-note { margin: 0; font-size: 12px; color: #9aa1ab; }
+
+  /* --- 原稿作成: 記事カード --------------------------------------------------- */
+  .work-card {
+    margin-bottom: 10px; padding: 10px 12px;
+    background: #23262c; border: 1px solid #3d434c; border-radius: 6px;
+  }
+  .work-card[data-mine="true"] { border-color: #5b87c0; }
+  .work-card[data-focus="other"] { opacity: 0.35; transition: opacity 0.12s; }
+  .work-card[data-focus="other"]:hover, .work-card[data-focus="other"]:focus-within { opacity: 1; }
+  .work-card__title { font-weight: 700; }
+  .work-card__meta { font-size: 12px; color: #9aa1ab; }
+  .work-card__status { font-size: 12px; margin-top: 4px; }
+  .work-card__status[data-level="error"] { color: #ff9d7a; }
+  .work-card__status[data-level="ok"] { color: #7fd1a5; }
+  .work-card__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .work-card__actions button {
+    font: 12px/1.4 system-ui, sans-serif; color: #e8eaed; background: #343941;
+    border: 1px solid #4a5058; border-radius: 5px; padding: 4px 8px; cursor: pointer;
+  }
+  .work-card__actions button.is-primary { background: #3d6aa3; border-color: #5b87c0; }
+
+  /* 原稿作成・校正: 書ける記事を囲み、書けない記事はそれと分かるように */
+  body[data-step="write"] .page [data-article][data-writable="true"],
+  body[data-step="proof"] .page [data-article][data-writable="true"] {
+    outline: 2px solid rgba(61, 127, 214, 0.55); outline-offset: 2px;
+  }
+  body[data-step="write"] .article:not(.article--block)[data-writable="true"] { display: block; }
+
+  /* 校正: 未解決コメントのある記事 */
+  body[data-step="proof"] .page [data-article][data-comments] {
+    box-shadow: inset 3px 0 0 #ffc46b;
+  }
+  .page-tools__count {
+    background: #6b5a33; color: #ffe2a8; border-radius: 8px; padding: 0 6px; margin-left: 4px;
+  }
+
+  /* --- 校正: コメント ---------------------------------------------------------- */
+  .comment-list { list-style: none; margin: 0 0 6px; padding: 0; }
+  .comment { padding: 6px 8px; margin-bottom: 6px; background: #23262c; border-radius: 6px; font-size: 12px; }
+  .comment[data-resolved="true"] { opacity: 0.55; }
+  .comment__head { color: #9aa1ab; }
+  .comment__quote {
+    margin: 4px 0; padding: 2px 8px; border-left: 3px solid #ffc46b; color: #e8d6a8; font-size: 12px;
+  }
+  .comment__resolve, .comment-form button {
+    margin-top: 4px; font: 12px/1.4 system-ui, sans-serif; color: #e8eaed;
+    background: #343941; border: 1px solid #4a5058; border-radius: 5px; padding: 3px 8px; cursor: pointer;
+  }
+  .comment-form textarea {
+    display: block; width: 100%; box-sizing: border-box; margin-top: 4px;
+    font: 12px/1.5 system-ui, sans-serif; color: #e8eaed;
+    background: #1d2025; border: 1px solid #4a5058; border-radius: 5px; padding: 6px;
+  }
+  .quote-pick { font-size: 12px; color: #ffe2a8; background: #2f2a22; padding: 6px 8px; border-radius: 6px; }
+
+  /* --- 設定（会報ごと） ---------------------------------------------------------- */
+  body[data-settings="open"] > .page,
+  body[data-settings="open"] > .plan-sheet,
+  body[data-settings="open"] .editor-panel,
+  body[data-settings="open"] .view-dock { display: none !important; }
+  body[data-settings="open"] .step-bar { opacity: 0.35; }
+
+  .settings-view {
+    position: fixed; top: var(--bar-h, 44px); left: 0; right: 0; bottom: 0; z-index: 80;
+    display: flex; flex-direction: column;
+    background: #2a2e34; color: #e8eaed;
+    font: 13px/1.6 system-ui, sans-serif;
+  }
+  .settings-head {
+    display: flex; align-items: center; gap: 14px; padding: 12px 20px;
+    border-bottom: 1px solid #454a52;
+  }
+  .settings-head h1 { margin: 0; font-size: 18px; color: #fff; }
+  .settings-head .exit-btn { flex: none; }
+  .settings-body { flex: 1; display: flex; min-height: 0; }
+  .settings-body > .panel-lock { position: absolute; right: 20px; top: 70px; z-index: 2; }
+
+  .tpl-side { width: 240px; flex: none; overflow-y: auto; padding: 14px; border-right: 1px solid #454a52; }
+  .tpl-list { display: flex; flex-direction: column; gap: 4px; }
+  .tpl-item {
+    display: flex; flex-direction: column; align-items: flex-start; text-align: left;
+    padding: 8px 10px; border-radius: 6px; cursor: pointer;
+    background: transparent; border: 1px solid transparent; color: #e8eaed; font: inherit;
+  }
+  .tpl-item:hover { background: #343941; }
+  .tpl-item[aria-current="true"] { background: #34537a; border-color: #5b87c0; }
+  .tpl-item__name { font-weight: 700; }
+  .tpl-item__meta { font-size: 11px; color: #9aa1ab; }
+  .tpl-item[aria-current="true"] .tpl-item__meta { color: #cfe0f5; }
+
+  .settings-main { flex: 1; min-width: 0; overflow-y: auto; padding: 16px 20px; }
+  /* 見出しの指定は設定画面そのものの見出しだけに効かせる（> を外すと、
+     テンプレートの見本の紙面の h2 まで白くなって見えなくなる） */
+  .settings-main > h2 { margin: 0 0 4px; font-size: 16px; color: #fff; }
+  .settings-main label { display: block; margin-bottom: 10px; font-size: 12px; color: #c9ced6; }
+  .settings-main input[type="text"], .settings-main input[type="number"], .settings-main select {
+    display: block; margin-top: 4px; width: 100%; box-sizing: border-box;
+    font: 13px/1.4 system-ui, sans-serif; color: #e8eaed;
+    background: #1d2025; border: 1px solid #4a5058; border-radius: 5px; padding: 5px 8px;
+  }
+  .settings-main .panel-check { display: flex; gap: 6px; align-items: center; }
+
+  .tpl-edit { display: flex; gap: 20px; align-items: flex-start; }
+  .tpl-edit__form { width: 220px; flex: none; }
+  .tpl-preview { flex: 1; min-width: 0; }
+  .tpl-legend { display: flex; gap: 14px; font-size: 12px; margin-bottom: 8px; }
+  .tpl-legend__fixed::before, .tpl-legend__slot::before {
+    content: ""; display: inline-block; width: 14px; height: 10px; margin-right: 6px; vertical-align: -1px;
+  }
+  .tpl-legend__fixed::before { background: rgba(255, 196, 107, 0.35); border: 1px solid #ffc46b; }
+  .tpl-legend__slot::before { border: 1px dashed #7fb2f0; }
+  /* 見本は実寸の 6 割。紙面と同じ CSS（components / print）で組むので、見た目は本番と一致する */
+  .tpl-preview__stage { height: calc(var(--page-height) * 0.6); overflow: hidden; }
+  .tpl-preview__page { transform: scale(0.6) !important; transform-origin: top left !important; margin: 0 !important; }
+  .tpl-preview__page::before { content: none !important; }
+  /* 見本の紙面は作業台の暗い地の中に置くので、文字色を継承させない。
+     紙面と同じ値（print.css の body と同じトークン）に戻す */
+  .tpl-preview__page {
+    color: var(--c-text);
+    font-family: var(--brand-font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+  }
+  /* 計画の工程では body に data-view="plan" が付いていて .page が伏せられる。
+     設定の見本は号の紙面ではないので、その条件から外す */
+  body .settings-view .tpl-preview__page { display: block; }
+  .tpl-preview__page [data-fixed="true"] { background: rgba(255, 196, 107, 0.22); outline: 1px solid rgba(255, 196, 107, 0.7); }
+  .tpl-preview__page [data-fixed="true"][contenteditable="true"]:focus { outline: 2px solid #ffc46b; background: rgba(255, 196, 107, 0.3); }
+  .tpl-preview__page [data-editable] { outline: 1px dashed #7fb2f0; outline-offset: 1px; }
+  .tpl-preview__page[data-kind-mode="true"] [data-editable],
+  .tpl-preview__page[data-kind-mode="true"] [data-fixed] { cursor: pointer; }
+  .tpl-preview__page[data-kind-mode="true"] [data-editable]:hover,
+  .tpl-preview__page[data-kind-mode="true"] [data-fixed]:hover { outline: 2px solid #ffc46b; }
+  .tpl-legend { margin-bottom: 0; }
+
+  .member-table { width: 100%; max-width: 760px; border-collapse: collapse; margin: 10px 0; }
+  .member-table th { text-align: left; font-weight: 400; color: #9aa1ab; font-size: 12px; padding: 4px 6px; border-bottom: 1px solid #454a52; }
+  .member-table td { padding: 4px 6px; border-bottom: 1px solid #383d45; }
+  .member-table input, .member-table select { margin-top: 0 !important; }
+  .settings-main--wide .panel-btn { max-width: 760px; }
+
+  .focus-pick { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 12px; color: #c9ced6; }
+  .focus-pick select { flex: 1; }
+  .focus-pick select[data-active="true"] { background: #3d5a80; border-color: #6d8fbf; color: #fff; }
+
+  /* ==========================================================================
+     保存・ログイン・ページの増減（決定 14 の画面に、本番の操作を戻した部分）
+     ========================================================================== */
+
+  /* 制作情報スラグは校正の工程でだけ画面に出す。印刷側の条件（print.css）と揃える。
+     ほかの工程で見えていると、入稿データにも刷られるように見えて紛らわしい */
+  body:not([data-proof="on"]) .production-slug { display: none; }
+
+  /* --- 保存状態・ログイン中の人（ツールバー） -------------------------------- */
+  .editor-bar__status[data-dirty="true"] { color: #ffc46b; }
+  .user-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: #c9ced6; white-space: nowrap;
+  }
+  .user-chip__role {
+    font-size: 11px; padding: 1px 7px; border-radius: 999px;
+    background: #34537a; color: #dbe8f8;
+  }
+  .user-chip__role[data-role="viewer"] { background: #4a5058; color: #e8eaed; }
+  .user-chip__role[data-role="staff"] { background: #2f5f4a; color: #d8f2e5; }
+  .editor-bar .user-chip button { padding: 3px 8px; font-size: 12px; }
+  /* 名簿が無いあいだは誰でも編集長として開く。そのことを隠さない */
+  .user-chip[data-setup="true"] { color: #ffc46b; }
+
+  /* --- ページ道具: 記事を足す ------------------------------------------------ */
+  .page-tools__pick,
+  .page-tools__add {
+    font: inherit;
+    color: #e8eaed;
+    background: #343941;
+    border: 1px solid #4a5058;
+    border-radius: 4px;
+    padding: 2px 5px;
+    cursor: pointer;
+    max-width: 140px;
+  }
+  .page-tools__pick:hover,
+  .page-tools__add:hover { background: #414751; }
+  /* 計画の工程で編集長が見ているときだけ、ページ道具を出したままにする */
+  body[data-step="plan"][data-role="editor"] .page-tools { opacity: 1; }
+  body:not([data-step="plan"]) .page-tools__add,
+  body:not([data-step="plan"]) .page-tools__pick { display: none; }
+
+  /* --- 記事カード: 番号と削除 -------------------------------------------------- */
+  .article-card__head { display: flex; align-items: center; gap: 8px; }
+  .article-card__del,
+  .frame-card__del {
+    margin-left: auto;
+    font: inherit; font-size: 12px;
+    color: #d9a2a2;
+    background: none;
+    border: 1px solid #5a4046;
+    border-radius: 4px;
+    padding: 2px 8px;
+    cursor: pointer;
+  }
+  .article-card__del:hover,
+  .frame-card__del:hover { background: #4a2f35; color: #fff; }
+  .article-card__sub {
+    font: inherit; font-size: 12px; color: #c9ced6;
+    background: #343941; border: 1px solid #4a5058; border-radius: 4px;
+    padding: 3px 8px; margin: 2px 6px 2px 0; cursor: pointer;
+  }
+  .article-card__sub:hover { background: #414751; }
+
+  /* 計画の工程の「ページの増減」行 */
+  .page-ops { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0 12px; }
+  .page-ops .panel-btn { width: auto; display: inline-block; margin: 0; }
+  .page-ops__count { font-size: 12px; color: #c9ced6; }
+  .page-ops__count[data-mismatch="true"] { color: #ffc46b; font-weight: 700; }
+
+  /* --- 設定: 保存の状態・名簿の合言葉 ------------------------------------------- */
+  .settings-head .editor-bar__status { margin-left: 4px; }
+  .member-table .member-pass { display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+  .member-table .member-pass button {
+    font: 12px/1.4 system-ui, sans-serif; color: #e8eaed; background: #343941;
+    border: 1px solid #4a5058; border-radius: 5px; padding: 3px 8px; cursor: pointer;
+  }
+  .member-pass__state { font-size: 11px; color: #9aa1ab; }
+  .member-pass__state[data-set="true"] { color: #7fd1a5; }
+  .member-table .member-del {
+    font: 12px/1.4 system-ui, sans-serif; color: #d9a2a2; background: none;
+    border: 1px solid #5a4046; border-radius: 4px; padding: 2px 8px; cursor: pointer;
+  }
+
+  /* --- ログイン ----------------------------------------------------------------
+     名簿（brands/<組織>/settings.js）がある号は、開いたときにまず誰かを選ぶ。
+     これは本人確認の仕組みではない。HTML を手で開けば誰でも中身を変えられる
+     （docs/09 §4）。目的は「誰として作業しているか」を画面に決めること */
+  body[data-login="pending"] > *:not(.login-view) { display: none !important; }
+  .login-view {
+    position: fixed; inset: 0; z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    background: #3b3f45;
+    font: 14px/1.6 system-ui, sans-serif; color: #e8eaed;
+  }
+  .login-card {
+    width: min(380px, calc(100vw - 32px));
+    padding: 24px 24px 20px;
+    background: #22252a; border: 1px solid #454a52; border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+  .login-card h1 { margin: 0 0 2px; font-size: 18px; color: #fff; }
+  .login-card__issue { margin: 0 0 16px; font-size: 12px; color: #9aa1ab; }
+  .login-card label { display: block; margin-bottom: 12px; font-size: 12px; color: #c9ced6; }
+  .login-card select,
+  .login-card input {
+    display: block; width: 100%; box-sizing: border-box; margin-top: 4px;
+    font: 14px/1.4 system-ui, sans-serif; color: #e8eaed;
+    background: #1d2025; border: 1px solid #4a5058; border-radius: 5px; padding: 7px 9px;
+  }
+  .login-card button[type="submit"] {
+    width: 100%; margin-top: 4px;
+    font: 700 14px/1.4 system-ui, sans-serif; color: #fff;
+    background: #3d6aa3; border: 1px solid #5b87c0; border-radius: 6px;
+    padding: 8px 12px; cursor: pointer;
+  }
+  .login-card__error { min-height: 1.4em; margin: 6px 0 0; font-size: 12px; color: #ff9d7a; }
+  .login-card__note { margin: 14px 0 0; font-size: 11px; color: #9aa1ab; }
+
+  /* 作業台は画面幅に追随し、印刷する紙面の寸法は変えない。 */
+  body { background: #e5e9ef; gap: 28px; padding-bottom: 100px; }
+  body > .page, body > .plan-sheet {
+    zoom: var(--zoom, 1);
+    transform: none;
+    margin-bottom: 0;
+    box-shadow: 0 8px 28px rgba(25, 39, 57, .16);
+  }
+  .page::before { color: #46556a; }
+  .editor-bar { padding: 12px 20px; gap: 10px; background: #182330; }
+  .editor-bar__title { font-size: 16px; letter-spacing: .02em; }
+  .editor-bar__issue { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .editor-bar__sep, .editor-bar__spacer { display: none; }
+  .editor-bar .step-bar { order: 10; width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .step-bar__arrow { display: none; }
+  .editor-bar .step-bar__step { min-height: 52px; justify-content: flex-start; border-radius: 10px; padding: 8px 12px; }
+  .step-bar__sub { margin-left: auto; }
+  .editor-bar .step-bar__step[aria-current="step"] { background: #224e78; border-color: #8cbdf0; box-shadow: inset 0 -3px #8cbdf0; }
+  .editor-bar .save-primary { margin-left: auto; background: #3268a3; border-color: #83b4e6; font-weight: 700; padding: 10px 24px; }
+  .editor-bar__status, .panel-note, .step-bar__sub, .work-card__meta, .panel-head__who { color: #bcc8d6; }
+  .editor-bar__toast { position: fixed; left: 50%; bottom: 88px; transform: translateX(-50%); max-width: calc(100vw - 32px); box-sizing: border-box; padding: 12px 18px; border-radius: 10px; background: #182330; color: #fff; white-space: normal; pointer-events: none; box-shadow: 0 4px 20px #0003; }
+  .editor-bar__toast:not([data-show="true"]) { visibility: hidden; }
+  .editor-panel { background: #202c3a; border-left-color: #354658; }
+  .editor-panel__content { padding: 22px 20px 28px; min-height: 0; overscroll-behavior: contain; }
+  .panel-head { align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .panel-head h1 { font-size: 23px; }
+  .step-help { color: #c9d6e6; font-size: 14px; line-height: 1.8; margin: 0 0 20px; }
+  .next-box { padding: 16px; background: #193b55; border-color: #47799f; border-radius: 12px; }
+  .next-box__label { font-size: 13px; font-weight: 700; color: #c5e4fc; }
+  button.next-box__item { display: block; width: 100%; color: inherit; background: transparent; border: 0; font: inherit; text-align: left; }
+  .check-list button { color: inherit; background: none; border: 0; font: inherit; text-align: left; cursor: pointer; text-decoration: underline; }
+  .next-box__item { padding-top: 6px; padding-bottom: 6px; }
+  .next-box__item::before { top: 6px; }
+  .editor-panel input, .editor-panel select, .settings-main input, .settings-main select, .comment-form textarea { border-radius: 8px; padding: 10px; min-height: 44px; }
+  .editor-panel button, .editor-panel summary, .settings-view button, .view-dock button, .view-dock select, .editor-bar button { min-height: 44px; }
+  .editor-panel summary { display: list-item; align-content: center; }
+  .editor-panel__exit { background: #182330; padding: 14px 20px; }
+  .exit-btn { min-height: 46px; border-radius: 8px; }
+  .work-card { padding: 16px; border-radius: 12px; }
+  .work-card__title { font-size: 15px; }
+  .work-card__actions { gap: 8px; margin-top: 12px; }
+  .work-card__actions button { padding: 10px 12px; border-radius: 8px; }
+  .view-dock { background: #182330; border-radius: 12px; box-shadow: 0 4px 16px #0002; }
+  .mobile-nav { display: none; }
+  .editor-bar :focus-visible, .editor-panel :focus-visible, .settings-view :focus-visible,
+  .view-dock :focus-visible, .login-view :focus-visible, .mobile-nav :focus-visible {
+    outline: 3px solid #a4d4ff; outline-offset: 3px;
+  }
+  body > .page { scroll-margin-top: calc(var(--bar-h, 120px) + 24px); }
+  .login-view { background: #edf1f6; padding: 24px 16px; box-sizing: border-box; overflow-y: auto; }
+  .login-card { box-sizing: border-box; width: min(480px, 100%); padding: 32px; border-radius: 20px; background: #182330; box-shadow: 0 16px 48px #18233026; }
+  .login-card__eyebrow { font-size: 12px; color: #acd4f5; }
+  .login-card h1 { font-size: 28px; margin-top: 6px; }
+  .login-card__issue { font-size: 14px; margin-top: 8px; color: #bfcddd; }
+  .login-card__intro { font-size: 14px; line-height: 1.8; }
+  .login-card__flow { display: grid; grid-template-columns: repeat(4, 1fr); list-style: none; padding: 0; gap: 6px; counter-reset: flow; margin: 24px 0; }
+  .login-card__flow li { counter-increment: flow; padding: 10px 4px; background: #24384d; border-radius: 8px; text-align: center; font-size: 12px; }
+  .login-card__flow li::before { content: counter(flow); display: block; color: #acd4f5; font-weight: 700; margin-bottom: 4px; }
+  .login-card select, .login-card input, .login-card button[type="submit"] { font-size: 16px; min-height: 48px; border-radius: 8px; }
+  .login-card label { font-size: 14px; }
+  .login-card__note { color: #bcc8d6; font-size: 12px; }
+
+  @media (max-width: 960px) {
+    html:has(.editor-bar) { overflow: hidden; }
+    body, body:not([data-settings]), body:has(.editor-panel[data-open="true"]) {
+      padding: calc(var(--bar-h, 150px) + 24px) 16px 150px;
+      align-items: flex-start;
+    }
+    body:has(.editor-bar) { width: 100%; height: 100dvh; box-sizing: border-box; overflow: auto; }
+    body[data-spread="on"]:not([data-view="plan"]) { display: flex; }
+    .editor-bar { padding: 10px 12px; gap: 6px; }
+    .editor-bar__title { font-size: 14px; }
+    .editor-bar__issue { max-width: 140px; font-size: 12px; }
+    .editor-bar .save-primary { padding: 8px 16px; }
+    .editor-bar__status { font-size: 11px; }
+    #kaiho-user { display: inline-flex; order: 5; max-width: calc(100% - 90px); overflow: hidden; }
+    #kaiho-user > span:first-child { overflow: hidden; text-overflow: ellipsis; }
+    #kaiho-user .user-chip__role { display: none; }
+    .editor-bar__settings { order: 6; }
+    .editor-bar .step-bar { gap: 4px; }
+    .editor-bar .step-bar__step { padding: 8px 4px; gap: 5px; justify-content: center; flex-wrap: wrap; }
+    .step-bar__label { font-size: 12px; }
+    .step-bar__no { width: 18px; height: 18px; }
+    .step-bar__sub { width: 100%; margin: 0; font-size: 10px; text-align: center; }
+    .step-bar__step[data-suggested="true"]:not([aria-current="step"]) .step-bar__label::after { content: ""; }
+    .editor-panel { width: 100%; bottom: calc(68px + env(safe-area-inset-bottom)); border-left: 0; }
+    .editor-panel__resizer { display: none; }
+    .editor-panel__content { padding: 20px; }
+    body[data-surface="paper"] .editor-panel { display: none; }
+    body[data-surface="tasks"] > .page, body[data-surface="tasks"] > .plan-sheet { visibility: hidden; }
+    body[data-surface="tasks"] { overflow: hidden; }
+    .mobile-nav { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 110; gap: 8px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); background: #182330; border-top: 1px solid #46566b; }
+    .mobile-nav button { flex: 1; min-height: 48px; border: 1px solid #64778d; border-radius: 10px; color: #e8eaed; background: #243344; font: 700 14px/1.4 system-ui, sans-serif; }
+    .mobile-nav button[aria-pressed="true"] { background: #3268a3; border-color: #acd4f5; }
+    .view-dock { left: 50%; bottom: calc(80px + env(safe-area-inset-bottom)); transform: translateX(-50%); max-width: calc(100vw - 32px); box-sizing: border-box; white-space: nowrap; }
+    body[data-surface="tasks"] .view-dock { display: none; }
+    #kaiho-spread { display: none; }
+    .editor-bar__toast { bottom: calc(142px + env(safe-area-inset-bottom)); }
+    .settings-head { padding: 12px; gap: 8px; flex-wrap: wrap; }
+    .settings-head .panel-note { width: 100%; margin: 0; }
+    .settings-view { bottom: calc(68px + env(safe-area-inset-bottom)); }
+    body[data-settings="open"] .mobile-nav { display: none; }
+    body[data-settings="open"] .settings-view { bottom: 0; }
+    .settings-body { flex-direction: column; overflow-y: auto; }
+    .tpl-side { width: auto; overflow: visible; padding: 12px; border-right: 0; border-bottom: 1px solid #454a52; }
+    .tpl-list { flex-direction: row; overflow-x: auto; }
+    .tpl-item { min-width: 120px; flex: none; }
+    .settings-main { flex: none; overflow: visible; padding: 16px; }
+    .tpl-edit { flex-direction: column; }
+    .tpl-edit__form { width: 100%; }
+    .tpl-preview { width: 100%; overflow-x: auto; }
+    .settings-main--wide { overflow-x: auto; }
+    .member-table { min-width: 680px; }
+    .stage-grid-wrap { overflow-x: auto; }
+    .editor-panel input, .editor-panel select, .editor-panel textarea, .settings-main input, .settings-main select { font-size: 16px; }
+    .page-tools { opacity: 1; }
+    body:not(:has(.editor-bar)) .page { zoom: clamp(0.1, calc((100vw - 32px) / var(--page-width)), 1); transform: none; margin-bottom: 24px; }
+    body:not(:has(.editor-bar)) .tmpl-intro, body:not(:has(.editor-bar)) .tmpl-note {
+      box-sizing: border-box; width: calc(100vw - 32px); min-width: 0; overflow-wrap: anywhere;
+    }
+    .login-card { padding: 24px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    body, .editor-bar__toast, .page-tools { transition: none; }
+    html { scroll-behavior: auto; }
+  }
+  @media (pointer: coarse) {
+    .page-tools button, .page-tools select, .frame-reflow { min-height: 44px; padding: 8px; }
+    .share-handle { height: 24px; margin-top: -12px; }
+    .share-handle::before { top: 11px; }
+  }
+}

@@ -1,0 +1,440 @@
+/* ============================================================================
+   kaiho-studio / system/components.css
+   ----------------------------------------------------------------------------
+   再利用可能なコンポーネント（要件3）。
+   すべて tokens.css の意味トークンだけを参照し、生の色・生の pt を書かない。
+   これによりブランドを差し替えても、このファイルは 1 行も直さなくてよい。
+   ========================================================================== */
+
+/* ==========================================================================
+   1. タイポグラフィ
+   ========================================================================== */
+h1, h2, h3, h4 {
+  margin: 0;
+  color: var(--c-heading);
+  font-weight: 700;
+  line-height: var(--lh-heading);
+  letter-spacing: var(--ls-heading);
+}
+
+/* 特集見出し。ページ最上部に置く想定 */
+.t-display { font-size: var(--fs-display); line-height: var(--lh-tight); }
+
+/* 記事タイトル */
+.t-h1 { font-size: var(--fs-h1); margin-bottom: var(--sp-4); }
+
+/* 中見出し。主色の縦罫を伴う */
+.t-h2 {
+  font-size: var(--fs-h2);
+  margin: var(--sp-8) 0 var(--sp-3);
+  padding-left: var(--sp-3);
+  border-left: var(--rule-thick) solid var(--c-rule-strong);
+}
+
+/* 小見出し */
+.t-h3 {
+  font-size: var(--fs-h3);
+  margin: var(--sp-6) 0 var(--sp-2);
+  color: var(--c-text);
+}
+
+/* 帯見出し。ベタ面に白抜き。ページの区切りに使う */
+.t-band {
+  display: block;
+  margin: 0 0 var(--sp-6);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--c-surface-brand);
+  color: var(--c-text-invert);
+  font-size: var(--fs-h2);
+}
+
+/* リード文。本文より一段大きく、行間を開ける */
+.t-lead {
+  font-size: var(--fs-lead);
+  line-height: var(--lh-loose);
+  color: var(--c-text);
+  margin: 0 0 var(--sp-6);
+}
+
+p { margin: 0 0 var(--sp-3); }
+p:last-child { margin-bottom: 0; }
+
+/* 本文ブロック。段組の中に置く */
+.t-body { font-size: var(--fs-body); line-height: var(--lh-body); }
+.t-small { font-size: var(--fs-small); }
+.t-caption {
+  font-size: var(--fs-caption);
+  line-height: 1.6;
+  color: var(--c-text-muted);
+}
+.t-serif { font-family: var(--brand-font-serif); }
+.t-num   { font-family: var(--brand-font-num); font-feature-settings: normal; }
+
+/* 署名・肩書き */
+.byline {
+  font-size: var(--fs-small);
+  color: var(--c-text-muted);
+  margin-top: var(--sp-2);
+}
+.byline__role { display: block; }
+.byline__name { font-size: var(--fs-body); color: var(--c-text); font-weight: 700; }
+
+/* ==========================================================================
+   2. 図版
+   ========================================================================== */
+figure { margin: 0 0 var(--sp-4); }
+figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+/* 縦横比を固定し、写真を差し替えてもレイアウトが崩れないようにする */
+.fig--16x9 img { aspect-ratio: 16 / 9; }
+.fig--4x3  img { aspect-ratio: 4 / 3; }
+.fig--1x1  img { aspect-ratio: 1 / 1; }
+figcaption {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-caption);
+  line-height: 1.6;
+  color: var(--c-text-muted);
+}
+/* 出典表記。キャプション本文と視覚的に分ける */
+.fig__credit { display: block; opacity: 0.8; }
+
+/* 顔写真。丸トリミングは印刷で粗が出やすいので角丸までに留める */
+.portrait {
+  width: 26mm;
+  border-radius: var(--radius-sm);
+}
+
+/* ==========================================================================
+   3. 囲み・引用
+   ========================================================================== */
+/* 淡色の囲み。補足情報 */
+.box {
+  padding: var(--sp-4);
+  background: var(--c-surface-tint);
+  border-radius: var(--radius-md);
+  margin: 0 0 var(--sp-4);
+}
+/* 主色の囲み。重要なお知らせ */
+.box--brand {
+  background: var(--c-surface-brand-light);
+  border-left: var(--rule-thick) solid var(--c-rule-strong);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+.box__title {
+  font-size: var(--fs-h3);
+  color: var(--c-heading);
+  margin-bottom: var(--sp-2);
+}
+
+/* 抜き刷り（プルクオート）。段抜きで置く */
+.pullquote {
+  margin: var(--sp-4) 0;
+  padding: var(--sp-4) 0;
+  border-top:    var(--rule-thin) solid var(--c-rule-strong);
+  border-bottom: var(--rule-thin) solid var(--c-rule-strong);
+  font-size: var(--fs-h3);
+  line-height: var(--lh-heading);
+  color: var(--c-heading);
+  font-family: var(--brand-font-serif);
+}
+.pullquote__source {
+  display: block;
+  margin-top: var(--sp-2);
+  font-family: var(--brand-font-sans);
+  font-size: var(--fs-small);
+  color: var(--c-text-muted);
+}
+
+/* 注意喚起 */
+.callout {
+  padding: var(--sp-3) var(--sp-4);
+  border: var(--rule-thin) solid var(--c-accent);
+  border-radius: var(--radius-md);
+  margin: 0 0 var(--sp-4);
+}
+.callout__label {
+  font-size: var(--fs-small);
+  font-weight: 700;
+  color: var(--c-accent);
+  display: block;
+  margin-bottom: var(--sp-1);
+}
+
+/* ==========================================================================
+   4. リスト・表
+   ========================================================================== */
+.list { margin: 0 0 var(--sp-4); padding-left: 1.4em; }
+.list li { margin-bottom: var(--sp-1); }
+.list--none { list-style: none; padding-left: 0; }
+
+/* 定義リスト。行事予定や連絡先に使う */
+.deflist { margin: 0 0 var(--sp-4); }
+.deflist__row {
+  display: grid;
+  grid-template-columns: 22mm 1fr;
+  gap: var(--sp-2);
+  padding: var(--sp-2) 0;
+  border-bottom: var(--rule-hairline) solid var(--c-rule);
+}
+.deflist__key { font-weight: 700; color: var(--c-heading); }
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+  margin: 0 0 var(--sp-4);
+}
+.table th,
+.table td {
+  padding: var(--sp-2);
+  border-bottom: var(--rule-hairline) solid var(--c-rule);
+  text-align: left;
+  vertical-align: top;
+}
+.table th {
+  background: var(--c-surface-tint);
+  color: var(--c-heading);
+  font-weight: 700;
+}
+.table--zebra tbody tr:nth-child(even) { background: var(--c-surface-tint); }
+
+/* ==========================================================================
+   5. 表紙・目次・奥付
+   ========================================================================== */
+.masthead { margin-bottom: var(--sp-8); }
+
+/* ロゴは CSS の背景ではなく <img> で置きます。
+   理由: カスタムプロパティに書いた url() の相対パスは、
+   その変数を「定義した」ファイルではなく「使った」ファイルを基準に解決されます。
+   brand.css に url("./logo.svg") と書いても system/ を探しに行って外れます。
+   <img src> なら号の HTML からの相対パスとして素直に解決でき、
+   alt 属性も付けられるので読み上げにも効きます。 */
+.masthead__logo {
+  display: block;
+  width: 42mm;
+  height: auto;              /* 縦横比は画像自身に従う */
+  margin-bottom: var(--sp-4);
+}
+.masthead__title {
+  font-size: var(--fs-display);
+  line-height: var(--lh-tight);
+  color: var(--c-heading);
+}
+.masthead__meta {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-small);
+  color: var(--c-text-muted);
+  letter-spacing: 0.08em;
+}
+
+.toc { margin: 0; padding: 0; list-style: none; }
+.toc__item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--sp-3);
+  align-items: baseline;
+  padding: var(--sp-2) 0;
+  border-bottom: var(--rule-hairline) solid var(--c-rule);
+}
+.toc__title { font-size: var(--fs-body); }
+.toc__page  { font-family: var(--brand-font-num); color: var(--c-text-muted); }
+
+/* 奥付。.page__body が flex なので margin-top:auto で下端に寄る */
+.colophon {
+  margin-top: auto;
+  padding-top: var(--sp-4);
+  border-top: var(--rule-thin) solid var(--c-rule-strong);
+  font-size: var(--fs-small);
+  line-height: 1.7;
+  color: var(--c-text-muted);
+}
+
+/* ==========================================================================
+   6. 記事
+   --------------------------------------------------------------------------
+   担当者・締切・工程は「記事」に付く（ページではない）。
+   1 本の記事が複数ページにまたがっても、1 ページに複数の記事が載っても、
+   責任の所在は記事の単位で決まる。
+
+   .article は意味づけのための入れ物であり、見た目を一切持たない。
+   余白や罫を足したくなったら、それは中身の部品側の仕事。
+
+   data-article="<記事ID>" が編集計画の記事と紙面を結ぶ唯一の手掛かり。
+   ID は編集計画パネルが発行する。手で書き換えないこと。
+   ========================================================================== */
+.article { display: contents; }
+
+/* 記事が段組やフレックスの中で「入れ物」として振る舞う必要がある場合に使う。
+   display:contents だと高さを持てないため、fill と併用するときはこちら。 */
+.article--block { display: block; }
+.article--flow  { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+
+/* 枠の中の記事の割合（docs/00 決定 11・12）。
+   1 ページに複数の記事が載るとき、各記事は .article--block の箱になり、
+   ページの高さのうち何％を取るかを style="--share: 45%" で受け取る。
+   規則はここにしか書かない。editor.js は値（--share）を渡すだけで、
+   規則そのものは生成しない（「editor.js は紙面の CSS を生成しない」約束）。
+
+   min-height: 0 を落とすと割合は効かない。フレックス項目の既定 min-height:auto は
+   「中身より小さくならない」なので、中身の長い記事の箱が黙って伸びて隣の記事の
+   場所を食い、しかもページとしては溢れないので検査もすり抜ける。
+   0 にすれば箱は割合ぴったりになり、溢れた分は箱からはみ出すので記事単位で測れる。 */
+.article--block { flex: 0 0 var(--share, auto); min-height: 0; }
+
+/* 「残り」＝そのページの余りを取る（.fill と同じ考え方）。--share は持たない。
+   .article--block と同じ要素に付くので、並び順に頼らず詳細度で上書きする。 */
+.article--block.article--rest { flex: 1 1 auto; min-height: 0; }
+
+/* ==========================================================================
+   7. 制作情報スラグ（要件13）
+   --------------------------------------------------------------------------
+   各ページの版面外に、そのページに載っている記事ごとの
+   担当者・連絡先・進行状況を 1 行ずつ刷り込む。
+   校正紙（body[data-proof="on"]）にだけ出力され、本番入稿では消える。
+   運用は docs/04-workflow.md を参照。
+   ========================================================================== */
+.production-slug {
+  position: absolute;
+  left: var(--page-margin-outer);
+  right: var(--page-margin-outer);
+  bottom: 2.5mm;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4mm;
+  font-family: var(--brand-font-num);
+  font-size: 6pt;
+  line-height: 1.4;
+  /* 6pt と小さいうえ、校正紙は白黒コピーで回されることが多い。
+     検査のコントラスト基準（4.5:1）を満たす濃さにしてある。薄くしないこと。 */
+  color: #666;
+  border-top: 0.2mm dashed #999;
+  padding-top: 1mm;
+}
+.production-slug__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--sp-2);
+  align-items: baseline;
+}
+.production-slug__title { font-weight: 700; color: #333; }
+.production-slug__owner { color: #333; }
+.production-slug__contact { color: #777; }
+.production-slug__warn { color: #c00; font-weight: 700; }
+.production-slug__stages { display: flex; gap: var(--sp-2); margin-left: auto; }
+.production-slug__stage { white-space: nowrap; }
+/* 現在の工程を反転表示にし、紙の上でも一目で分かるようにする */
+.production-slug__stage[data-state="current"] {
+  background: #333;
+  color: #fff;
+  padding: 0 1mm;
+}
+.production-slug__stage[data-state="done"]::before { content: "\2713 "; }
+.production-slug__stage[data-state="overdue"] { color: #c00; font-weight: 700; }
+
+/* ==========================================================================
+   8. 台割シート
+   --------------------------------------------------------------------------
+   編集計画から導出される制作用の帳票。会報の紙面ではない。
+   editor.js が meta から毎回作り直すため、計画とずれることがない。
+   body[data-view="plan"] のときだけ画面と印刷に現れる。
+   ========================================================================== */
+.plan-sheet {
+  display: none;                 /* 表示条件は print.css / editor.css が持つ */
+  box-sizing: border-box;
+  width: var(--page-width);
+  padding: 15mm;
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-size: 9pt;
+  line-height: 1.6;
+}
+.plan-sheet h1 { font-size: var(--fs-h1); margin-bottom: var(--sp-1); }
+.plan-sheet h2 {
+  font-size: var(--fs-h3);
+  margin: var(--sp-8) 0 var(--sp-2);
+  padding-left: var(--sp-2);
+  border-left: var(--rule-thick) solid var(--c-rule-strong);
+}
+.plan-sheet__head {
+  padding-bottom: var(--sp-3);
+  border-bottom: var(--rule-thin) solid var(--c-rule-strong);
+}
+.plan-sheet__head p { font-size: var(--fs-small); color: var(--c-text-muted); }
+.plan-sheet__note { margin-top: var(--sp-4); font-size: 8pt; color: var(--c-text-muted); }
+
+/* 台割図。1 セル = 1 ページ */
+.plan-map {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2mm;
+}
+.plan-map__cell {
+  border: var(--rule-thin) solid var(--c-rule);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2);
+  min-height: 16mm;
+  display: flex;
+  flex-direction: column;
+  gap: 1mm;
+}
+.plan-map__no {
+  font-family: var(--brand-font-num);
+  font-size: 8pt;
+  color: var(--c-text-muted);
+}
+.plan-map__title { font-size: 8.5pt; line-height: 1.4; }
+.plan-map__cell[data-empty="true"] { background: var(--c-surface-tint); }
+.plan-map__cell[data-empty="true"] .plan-map__title { color: #c00; }
+/* 計画では確保しているが、まだ紙面が存在しないページ */
+.plan-map__cell[data-beyond="true"] { border-style: dashed; opacity: 0.75; }
+
+.plan-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 8.5pt;
+}
+.plan-table th,
+.plan-table td {
+  padding: var(--sp-2);
+  border-bottom: var(--rule-hairline) solid var(--c-rule);
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+.plan-table th {
+  background: var(--c-surface-tint);
+  color: var(--c-heading);
+  font-weight: 700;
+}
+.plan-table td[data-warn="true"] { color: #c00; font-weight: 700; }
+/* 工程の状態。紙に刷っても白黒コピーでも判別できるようにしてある */
+.plan-table td[data-state="done"]    { background: var(--c-surface-tint); color: var(--c-text-muted); }
+.plan-table td[data-state="current"] { outline: var(--rule-thin) solid var(--c-rule-strong); font-weight: 700; }
+.plan-table td[data-state="overdue"] { color: #c00; font-weight: 700; }
+
+/* ==========================================================================
+   7. 汎用ユーティリティ（最小限に留める）
+   ========================================================================== */
+.stack > * + * { margin-top: var(--sp-4); }
+.mt-0 { margin-top: 0; }
+.mb-0 { margin-bottom: 0; }
+.mb-4 { margin-bottom: var(--sp-4); }
+.mb-8 { margin-bottom: var(--sp-8); }
+.fill { flex: 1 1 auto; min-height: 0; }
+.text-invert { color: var(--c-text-invert); }
+.bg-brand { background: var(--c-surface-brand); }
+.bg-tint  { background: var(--c-surface-tint); }
+
+/* スクリーンリーダー専用テキスト。PDF のタグ付けにも効く */
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

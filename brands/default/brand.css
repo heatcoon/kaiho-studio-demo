@@ -1,0 +1,31 @@
+/* ============================================================================
+   brands/default — 中立ブランド（プレースホルダ）
+   ----------------------------------------------------------------------------
+   実在する団体を想定しない、システム既定の見本。
+   実案件では brands/_template をコピーして別フォルダを作ること。
+   このフォルダは「差し替え前の状態」を示す参照実装として残す。
+   ========================================================================== */
+
+:root {
+  --brand-primary:        #1f4e79;
+  --brand-primary-dark:   #143654;
+  --brand-primary-light:  #e8eef4;
+  --brand-accent:         #c0561f;
+  --brand-ink:            #1a1a1a;
+  --brand-ink-muted:      #5a5a5a;
+  --brand-rule:           #c8ccd0;
+  --brand-paper:          #ffffff;
+  --brand-paper-tint:     #f4f5f6;
+
+  --brand-font-sans:  "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic Medium",
+                      "Yu Gothic", Meiryo, system-ui, sans-serif;
+  --brand-font-serif: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho",
+                      "YuMincho", "MS PMincho", serif;
+  --brand-font-num:   "Helvetica Neue", Arial, sans-serif;
+
+  /* ロゴは同じフォルダの logo.svg。CSS からではなく
+     号の HTML の <img class="masthead__logo"> で読み込む。 */
+
+  --brand-name:  "サンプル会";
+  --brand-title: "会報サンプル";
+}

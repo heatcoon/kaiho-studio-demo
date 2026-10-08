@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="ja" data-format="A4">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>コンポーネント見本帳</title>
+<link rel="stylesheet" href="../system/tokens.css">
+<link rel="stylesheet" href="../brands/default/brand.css">
+<link rel="stylesheet" href="../system/print.css">
+<link rel="stylesheet" href="../system/components.css">
+<link rel="stylesheet" href="../system/editor.css">
+<!-- page-templates.js は editor.js より前に読むこと。
+     editor.js が window.KAIHO_PAGE_TEMPLATES を参照する前提のため、
+     順序が逆になると（page-templates.js 未定義のまま editor.js が動くと）壊れる。 -->
+<script src="../system/page-templates.js" defer></script>
+<script src="../system/editor.js" defer></script>
+<style>
+  /* 見本帳だけで使う注記。実際の号ではこの style ブロックごと不要です。 */
+  .spec {
+    font-family: var(--brand-font-num);
+    font-size: 7.5pt;
+    color: var(--c-accent);
+    display: block;
+    margin: var(--sp-1) 0 var(--sp-3);
+  }
+  .spec::before { content: "class: "; opacity: .6; }
+</style>
+</head>
+<body>
+
+<!-- ========================================================================
+     この見本帳は「使ってよい部品の全リスト」です。
+     ここに無い体裁が必要になったら、その場で CSS を足さず、
+     docs/06-maintenance.md の変更提案の手順に乗せてください。
+     一号かぎりの例外を紙面に直接書くことが、システムが崩れる最大の原因です。
+     ===================================================================== -->
+
+<!-- p1 タイポグラフィ -->
+<section class="page" data-folio="none">
+  <div class="page__body">
+    <article class="article" data-article="g1">
+      <span class="t-band">コンポーネント見本帳</span>
+      <p class="t-lead">会報スタジオで使用できる部品の一覧です。赤字は指定するクラス名。</p>
+
+      <h2 class="t-h2">1. 見出し</h2>
+
+      <p class="t-display">特集大見出し</p>
+      <span class="spec">t-display</span>
+
+      <h3 class="t-h1">記事タイトル</h3>
+      <span class="spec">t-h1</span>
+
+      <h3 class="t-h2">中見出し</h3>
+      <span class="spec">t-h2（主色の縦罫つき）</span>
+
+      <h4 class="t-h3">小見出し</h4>
+      <span class="spec">t-h3</span>
+
+      <span class="t-band">帯見出し</span>
+      <span class="spec">t-band（白抜き。1ページに1つまで）</span>
+    </article>
+  </div>
+  <span class="page__folio"></span>
+</section>
+
+
+<!-- p2 本文 -->
+<section class="page">
+  <div class="page__body">
+    <article class="article" data-article="g2">
+      <h2 class="t-h2 mt-0">2. 本文</h2>
+
+      <p class="t-lead">リード文。記事の入口として本文より一段大きく組みます。</p>
+      <span class="spec">t-lead</span>
+
+      <p class="t-body">本文。10.5pt／行送り1.75。会報の可読性の基準はここです。</p>
+      <span class="spec">t-body</span>
+
+      <p class="t-small">注記。9pt。</p>
+      <span class="spec">t-small</span>
+
+      <p class="t-caption">キャプション。8.5pt。これより小さい文字は使いません。</p>
+      <span class="spec">t-caption</span>
+
+      <p class="t-serif">明朝体。引用や情緒的な文に限って使います。</p>
+      <span class="spec">t-serif</span>
+
+      <p class="byline">
+        <span class="byline__role">肩書き</span>
+        <span class="byline__name">署名</span>
+      </p>
+      <span class="spec">byline / byline__role / byline__name</span>
+    </article>
+  </div>
+  <span class="page__runhead">見本帳</span>
+  <span class="page__folio"></span>
+</section>
+
+
+<!-- p3 図版 -->
+<section class="page">
+  <div class="page__body">
+    <article class="article" data-article="g3">
+      <h2 class="t-h2 mt-0">3. 図版</h2>
+
+      <div class="grid mb-4" style="grid-template-columns: repeat(3, 1fr);">
+        <figure class="fig--16x9">
+          <img src="../system/placeholder.svg" alt="代替テキストの例">
+          <figcaption>16:9</figcaption>
+        </figure>
+        <figure class="fig--4x3">
+          <img src="../system/placeholder.svg" alt="代替テキストの例">
+          <figcaption>4:3</figcaption>
+        </figure>
+        <figure class="fig--1x1">
+          <img src="../system/placeholder.svg" alt="代替テキストの例">
+          <figcaption>1:1</figcaption>
+        </figure>
+      </div>
+      <span class="spec">fig--16x9 / fig--4x3 / fig--1x1</span>
+      <p class="t-small">
+        縦横比を固定しているため、写真を差し替えてもレイアウトが動きません。
+        <strong>alt 属性は必須</strong>です。装飾目的の画像でも <code>alt=""</code> と明示してください。
+      </p>
+
+      <figure style="width: 30mm;">
+        <img class="portrait" src="../system/placeholder.svg" alt="人物の顔写真">
+        <figcaption>顔写真</figcaption>
+      </figure>
+      <span class="spec">portrait</span>
+    </article>
+  </div>
+  <span class="page__runhead">見本帳</span>
+  <span class="page__folio"></span>
+</section>
+
+
+<!-- p4 囲み・引用 -->
+<section class="page">
+  <div class="page__body">
+    <article class="article" data-article="g4">
+      <h2 class="t-h2 mt-0">4. 囲み・引用</h2>
+
+      <div class="box">
+        <h3 class="box__title">淡色の囲み</h3>
+        <p>補足情報に使います。</p>
+      </div>
+      <span class="spec">box / box__title</span>
+
+      <div class="box box--brand">
+        <h3 class="box__title">主色の囲み</h3>
+        <p>会員に必ず届けたい重要なお知らせに使います。</p>
+      </div>
+      <span class="spec">box box--brand</span>
+
+      <blockquote class="pullquote">
+        記事中の印象的な一文。
+        <span class="pullquote__source">— 話者名</span>
+      </blockquote>
+      <span class="spec">pullquote / pullquote__source</span>
+
+      <aside class="callout">
+        <span class="callout__label">おことわり</span>
+        注意事項。差し色を使うので 1 ページに 1 つまで。
+      </aside>
+      <span class="spec">callout / callout__label</span>
+    </article>
+  </div>
+  <span class="page__runhead">見本帳</span>
+  <span class="page__folio"></span>
+</section>
+
+
+<!-- p5 リスト・表・段組 -->
+<section class="page">
+  <div class="page__body">
+    <article class="article" data-article="g5">
+      <h2 class="t-h2 mt-0">5. リスト・表</h2>
+
+      <dl class="deflist">
+        <div class="deflist__row"><dt class="deflist__key t-num">4/12</dt><dd>行事名（会場・時間）</dd></div>
+        <div class="deflist__row"><dt class="deflist__key t-num">5/20</dt><dd>行事名（会場・時間）</dd></div>
+      </dl>
+      <span class="spec">deflist / deflist__row / deflist__key</span>
+
+      <table class="table table--zebra">
+        <thead><tr><th scope="col">項目</th><th scope="col">前年度</th><th scope="col">今年度</th></tr></thead>
+        <tbody>
+          <tr><td>会員数</td><td class="t-num">312</td><td class="t-num">338</td></tr>
+          <tr><td>行事開催数</td><td class="t-num">18</td><td class="t-num">21</td></tr>
+        </tbody>
+      </table>
+      <span class="spec">table / table--zebra（th には必ず scope を付ける）</span>
+
+      <ul class="toc">
+        <li class="toc__item"><span class="toc__title">記事タイトル</span><span class="toc__page t-num">3</span></li>
+        <li class="toc__item"><span class="toc__title">記事タイトル</span><span class="toc__page t-num">5</span></li>
+      </ul>
+      <span class="spec">toc / toc__item / toc__title / toc__page</span>
+
+      <h2 class="t-h2">6. 段組</h2>
+      <div class="cols-2 cols-rule" style="height: 30mm;">
+        <p>2段組。cols-rule を足すと段間に罫が入ります。</p>
+        <p>本文は段をまたいで自動で流れます。</p>
+      </div>
+      <span class="spec">cols-2 / cols-3 / cols-rule / col-span-all</span>
+
+      <h2 class="t-h2">7. 奥付</h2>
+      <footer class="colophon" style="margin-top: 0;">
+        <p><strong>会報タイトル　第00号</strong>　2026年1月発行</p>
+        <p>発行：団体名</p>
+      </footer>
+      <span class="spec">colophon（通常はページ下端に自動で寄ります）</span>
+    </article>
+  </div>
+  <span class="page__runhead">見本帳</span>
+  <span class="page__folio"></span>
+</section>
+
+
+<!-- p6 使い方の約束 -->
+<section class="page">
+  <div class="page__body">
+    <article class="article" data-article="g6">
+      <span class="t-band">使い方の約束</span>
+
+      <h2 class="t-h2 mt-0">紙面に直接 style を書かない</h2>
+      <p class="t-body">
+        色・文字サイズ・余白を紙面の HTML に直接書くと、ブランドを差し替えたときに
+        そこだけ取り残されます。必要な体裁が見本帳に無い場合は、
+        その場しのぎで書かずに変更提案の手順（docs/06-maintenance.md）に乗せてください。
+      </p>
+
+      <h2 class="t-h2">data-article を手で書き換えない</h2>
+      <p class="t-body">
+        担当者・締切・進行状況は<strong>記事</strong>に付きます（ページではありません）。
+        紙面と編集計画を結んでいるのは <code>data-article</code> の値だけです。
+        書き換えると担当と締切の紐付けが切れ、検査がエラーで指摘します。
+        記事の追加・削除は「計画」の工程（編集長）で行ってください。
+        1 ページに載る記事は 1 本とは限りません。お知らせと行事予定を同じページに
+        載せるときは、計画で同じ枠に記事を足して割合を決めるか、
+        そのページの右上に出る「<strong>＋ 記事</strong>」から足します（p.7 の見本）。
+      </p>
+
+      <h2 class="t-h2">ページ番号を手で打たない</h2>
+      <p class="t-body">
+        ノンブルは CSS カウンタで自動採番されます。ページを増減しても狂いません。
+        表紙の目次（<code>data-toc="auto"</code>）も編集計画と紙面から自動で作り直されます。
+        手で書いた目次を使う号だけは、ページ構成を変えたら必ず突き合わせてください。
+      </p>
+
+      <h2 class="t-h2">溢れ警告を残したまま校正に回さない</h2>
+      <p class="t-body">
+        版面から溢れた内容は印刷時に切り落とされ、紙には出ません。
+        画面では紙面が白く見えていても消えています。
+        赤枠の警告は必ず解消してください。
+      </p>
+
+      <h2 class="t-h2">色だけで意味を伝えない</h2>
+      <p class="t-body">
+        色覚特性によっては差し色が本文と区別できません。重要度は
+        囲み・ラベル・見出しといった形でも示してください。
+        詳細は docs/05-accessibility.md を参照。
+      </p>
+
+      <div class="box box--brand">
+        <h3 class="box__title">困ったときは</h3>
+        <p class="t-small">
+          docs/ 以下に、ブランド／テンプレート／部品／進行／アクセシビリティ／保守／教育の
+          各ガイドがあります。まず docs/README.md を見てください。
+        </p>
+      </div>
+    </article>
+  </div>
+  <span class="page__runhead">見本帳</span>
+  <span class="page__folio"></span>
+</section>
+
+<!-- p7 1 ページに複数の記事（枠と割合、docs/00 決定 11・12） -->
+<section class="page">
+  <div class="page__body">
+    <article class="article article--block" data-article="g7a" style="--share: 40%">
+      <span class="t-band">8. 1 ページに複数の記事</span>
+      <h2 class="t-h2">割合を持つ記事（article--block）</h2>
+      <p class="t-body">
+        1 ページを複数の記事で分け合うときは、記事の入れ物を
+        <code>article article--block</code> にし、ページの高さのうち何％を取るかを
+        <code>style="--share: 40%"</code> で渡します。規則は components.css にあり、
+        値は「計画」の工程の割合（全面・3/4・2/3・1/2・1/3・1/4・残り、細かく調整なら 5% 刻み）
+        から editor.js が書き込みます。<strong>手で書かないこと。</strong>
+      </p>
+      <span class="spec">article--block ＋ style="--share: N%"（この記事は 40%）</span>
+    </article>
+
+    <article class="article article--block article--rest" data-article="g7b">
+      <h2 class="t-h2">残りを取る記事（article--rest）</h2>
+      <p class="t-body">
+        <code>article--rest</code> はそのページの余りを取ります（<code>.fill</code> と同じ考え方）。
+        1 ページに 1 本まで。割当を越えた記事は、ページが溢れていなくても
+        「割当を約 N mm 超えています」と検査が指摘します。
+      </p>
+      <span class="spec">article--block article--rest（--share は持たない）</span>
+    </article>
+  </div>
+  <span class="page__runhead">見本帳</span>
+  <span class="page__folio"></span>
+</section>
+
+<!-- 号のメタ情報と編集計画。
+     会報を作り始める前に、「計画」の工程（編集長）で
+     枠・記事・占有ページ数を決め、記事ごとに担当者と締切を割り当ててください。
+     記事の掲載ページはここには持ちません。紙面の data-article から
+     毎回読み直すので、原稿を動かしても計画とずれません。 -->
+<script type="application/json" id="kaiho-meta">
+{
+  "issue": "コンポーネント見本帳",
+  "date": "",
+  "format": "A4",
+  "schedule": {},
+  "editor": {
+    "name": "デザインシステム管理者",
+    "contact": ""
+  },
+  "plan": {
+    "articles": [
+      {
+        "id": "g1",
+        "title": "見出し",
+        "template": "free",
+        "pages": 1,
+        "owner": "デザインシステム管理者",
+        "contact": "",
+        "current": "signoff",
+        "schedule": {}
+      },
+      {
+        "id": "g2",
+        "title": "本文",
+        "template": "free",
+        "pages": 1,
+        "owner": "デザインシステム管理者",
+        "contact": "",
+        "current": "signoff",
+        "schedule": {}
+      },
+      {
+        "id": "g3",
+        "title": "図版",
+        "template": "free",
+        "pages": 1,
+        "owner": "デザインシステム管理者",
+        "contact": "",
+        "current": "signoff",
+        "schedule": {}
+      },
+      {
+        "id": "g4",
+        "title": "囲み・引用",
+        "template": "free",
+        "pages": 1,
+        "owner": "デザインシステム管理者",
+        "contact": "",
+        "current": "signoff",
+        "schedule": {}
+      },
+      {
+        "id": "g5",
+        "title": "リスト・表・段組",
+        "template": "free",
+        "pages": 1,
+        "owner": "デザインシステム管理者",
+        "contact": "",
+        "current": "signoff",
+        "schedule": {}
+      },
+      {
+        "id": "g6",
+        "title": "使い方の約束",
+        "template": "free",
+        "pages": 1,
+        "owner": "デザインシステム管理者",
+        "contact": "",
+        "current": "signoff",
+        "schedule": {}
+      },
+      {
+        "id": "g7a",
+        "title": "1 ページに複数の記事",
+        "owner": "デザインシステム管理者",
+        "contact": "",
+        "current": "signoff",
+        "schedule": {},
+        "share": 40
+      },
+      {
+        "id": "g7b",
+        "title": "残りを取る記事",
+        "share": "rest",
+        "owner": "デザインシステム管理者",
+        "contact": "",
+        "current": "signoff",
+        "schedule": {}
+      }
+    ],
+    "frames": [
+      {
+        "id": "f-g7",
+        "title": "1 ページに複数の記事",
+        "template": "free",
+        "pages": 1,
+        "articles": [
+          "g7a",
+          "g7b"
+        ]
+      }
+    ]
+  },
+  "released": true
+}
+</script>
+
+</body>
+</html>

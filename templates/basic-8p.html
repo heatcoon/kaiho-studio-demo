@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="ja" data-format="A4">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>会報テンプレート（8ページ）</title>
+
+<!--
+  読み込み順に意味がある。順番を入れ替えないこと。
+    1. tokens.css  中立のトークン（フォールバック）
+    2. brand.css   組織ごとの上書き。ここだけを差し替えればブランドが変わる
+    3. print.css   判型とページ機構
+    4. components.css  部品
+    5. editor.css  画面の作業台まわり（@media screen 内で完結）
+-->
+<link rel="stylesheet" href="../system/tokens.css">
+<link rel="stylesheet" href="../brands/default/brand.css">
+<link rel="stylesheet" href="../system/print.css">
+<link rel="stylesheet" href="../system/components.css">
+<link rel="stylesheet" href="../system/editor.css">
+<!-- page-templates.js は editor.js より前に読むこと。
+     editor.js が window.KAIHO_PAGE_TEMPLATES を参照する前提のため、
+     順序が逆になると（page-templates.js 未定義のまま editor.js が動くと）壊れる。 -->
+<script src="../system/page-templates.js" defer></script>
+<script src="../system/editor.js" defer></script>
+</head>
+
+<!--
+  data-proof / data-mode / data-guides / data-view などは、工程と見え方に応じて
+  editor.js が付け外しするもので、保存時に取り除かれるため、ここには書かない
+  （校正紙の制作情報は「校正」の工程に入ると自動で付く。docs/00 決定 14）。
+-->
+<body>
+
+<!-- ========================================================================
+     p1  表紙
+     ページ番号（ノンブル）は表紙には出さないので data-folio="none"。
+     ページ番号は CSS カウンタで自動採番されるため、手で数字を書かないこと。
+     ===================================================================== -->
+<section class="page" data-folio="none">
+  <div class="page__body">
+    <article class="article" data-article="cover">
+
+      <header class="masthead">
+        <!-- ロゴのパスは、上の <link> と同じ brands/ フォルダを指す。
+             号を issues/ 以下に置いたら ../../brands/... に直すこと。 -->
+        <img class="masthead__logo" src="../brands/default/logo.svg" alt="団体名">
+        <h1 class="masthead__title" data-editable>会報タイトル</h1>
+        <p class="masthead__meta t-num" data-editable>第00号　2026年1月発行</p>
+      </header>
+
+      <figure class="fig--16x9 mb-8">
+        <img src="../system/placeholder.svg" alt="表紙写真の内容を説明する代替テキスト">
+        <figcaption data-editable>
+          表紙写真のキャプション
+          <span class="fig__credit" data-editable>撮影：氏名</span>
+        </figcaption>
+      </figure>
+
+      <p class="t-lead" data-editable>
+        表紙リード。この号の中心となる話題を、2〜3行で読者に手渡します。
+      </p>
+
+      <nav aria-label="目次" class="fill">
+        <h2 class="t-h3">もくじ</h2>
+        <ul class="toc" data-toc="auto"></ul>
+      </nav>
+
+    </article>
+  </div>
+  <span class="page__folio"></span>
+</section>
+
+
+<!-- ========================================================================
+     p2  巻頭あいさつ
+     ===================================================================== -->
+<section class="page">
+  <div class="page__body">
+    <article class="article" data-article="greeting">
+
+      <h2 class="t-h1" data-editable>巻頭のごあいさつ</h2>
+
+      <div class="cols-2 cols-rule fill">
+        <figure class="fig--1x1" style="width: 34mm;">
+          <img class="portrait" src="../system/placeholder.svg" alt="会長の顔写真">
+          <figcaption data-editable>会長　氏名</figcaption>
+        </figure>
+
+        <div class="t-body" data-editable>
+          <p>本文が入ります。段組の中で自然に流れます。</p>
+          <p>2段目へは自動で送られます。文字を入れすぎて版面から溢れた場合は、
+             プレビューが赤枠と「版面から溢れています」の警告で知らせます。</p>
+          <p>警告が出たまま印刷すると、溢れた分は切り落とされて紙に出ません。
+             必ず解消してから校正に回してください。</p>
+        </div>
+      </div>
+
+      <p class="byline" data-editable>
+        <span class="byline__role">会長</span>
+        <span class="byline__name">氏名</span>
+      </p>
+
+    </article>
+  </div>
+  <span class="page__runhead" data-editable>巻頭あいさつ</span>
+  <span class="page__folio"></span>
+</section>
+
+
+<!-- ========================================================================
+     p3  特集（前半）
+     ===================================================================== -->
+<section class="page">
+  <div class="page__body">
+    <article class="article" data-article="feature">
+
+      <span class="t-band" data-editable>特集</span>
+      <h2 class="t-h1" data-editable>特集の見出しがここに入ります</h2>
+      <p class="t-lead" data-editable>
+        特集のリード文。何についての記事か、なぜ今それを扱うのかを短く示します。
+      </p>
+
+      <div class="cols-2 cols-rule fill" data-editable>
+        <p>本文が入ります。</p>
+
+        <h3 class="t-h3">小見出し</h3>
+        <p>小見出しは段の中に置けます。直後で改段されないよう
+           break-after: avoid を効かせてあります。</p>
+
+        <blockquote class="pullquote">
+          引用や、記事中の印象的な一文をここに置きます。
+          <span class="pullquote__source">— 話者名</span>
+        </blockquote>
+
+        <p>本文の続きです。</p>
+      </div>
+
+    </article>
+  </div>
+  <span class="page__runhead" data-editable>特集</span>
+  <span class="page__folio"></span>
+</section>
+
+
+<!-- ========================================================================
+     p4  特集（後半）
+     ===================================================================== -->
+<section class="page">
+  <div class="page__body">
+    <article class="article" data-article="feature">
+
+      <h2 class="t-h2" data-editable>中見出し</h2>
+
+      <figure class="fig--16x9">
+        <img src="../system/placeholder.svg" alt="図版の内容を説明する代替テキスト">
+        <figcaption data-editable>
+          図版のキャプション
+          <span class="fig__credit" data-editable>出典：◯◯</span>
+        </figcaption>
+      </figure>
+
+      <div class="cols-2 fill" data-editable>
+        <p>本文が入ります。</p>
+        <p>本文の続きです。</p>
+      </div>
+
+      <aside class="callout" data-editable>
+        <span class="callout__label">おことわり</span>
+        補足や注意事項をここに書きます。差し色を使う数少ない部品なので、
+        1 ページに 1 つまでを目安にしてください。
+      </aside>
+
+    </article>
+  </div>
+  <span class="page__runhead" data-editable>特集</span>
+  <span class="page__folio"></span>
+</section>
+
+
+<!-- ========================================================================
+     p5  活動報告
+     ===================================================================== -->
+<section class="page">
+  <div class="page__body">
+    <article class="article" data-article="report">
+
+      <h2 class="t-h1" data-editable>活動報告</h2>
+
+      <div class="grid mb-8" style="grid-template-columns: repeat(2, 1fr);">
+        <figure class="fig--4x3">
+          <img src="../system/placeholder.svg" alt="活動の様子を説明する代替テキスト">
+          <figcaption data-editable>行事名（開催日）</figcaption>
+        </figure>
+        <figure class="fig--4x3">
+          <img src="../system/placeholder.svg" alt="活動の様子を説明する代替テキスト">
+          <figcaption data-editable>行事名（開催日）</figcaption>
+        </figure>
+      </div>
+
+      <div class="cols-2 fill" data-editable>
+        <h3 class="t-h3">行事名</h3>
+        <p>報告の本文が入ります。</p>
+        <h3 class="t-h3">行事名</h3>
+        <p>報告の本文が入ります。</p>
+      </div>
+
+    </article>
+  </div>
+  <span class="page__runhead" data-editable>活動報告</span>
+  <span class="page__folio"></span>
+</section>
+
+
+<!-- ========================================================================
+     p6  データ
+     ===================================================================== -->
+<section class="page">
+  <div class="page__body">
+    <article class="article" data-article="data">
+
+      <h2 class="t-h1" data-editable>データで見る一年</h2>
+
+      <!-- 表には必ず見出しセル（th）と scope を付けます。
+           読み上げと PDF のタグ付けが正しく効くようにするためです。 -->
+      <table class="table table--zebra" data-editable>
+        <caption class="visually-hidden">年度別の活動実績</caption>
+        <thead>
+          <tr><th scope="col">項目</th><th scope="col">前年度</th><th scope="col">今年度</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>会員数</td><td class="t-num">000</td><td class="t-num">000</td></tr>
+          <tr><td>行事開催数</td><td class="t-num">00</td><td class="t-num">00</td></tr>
+          <tr><td>延べ参加者数</td><td class="t-num">0,000</td><td class="t-num">0,000</td></tr>
+        </tbody>
+      </table>
+
+      <div class="box fill" data-editable>
+        <h3 class="box__title">補足</h3>
+        <p>集計方法や注記をここに書きます。</p>
+      </div>
+
+    </article>
+  </div>
+  <span class="page__runhead" data-editable>データ</span>
+  <span class="page__folio"></span>
+</section>
+
+
+<!-- ========================================================================
+     p7  お知らせ・行事予定
+     ===================================================================== -->
+<section class="page">
+  <div class="page__body">
+    <article class="article" data-article="notice">
+
+      <h2 class="t-h1" data-editable>お知らせ</h2>
+
+      <div class="box box--brand" data-editable>
+        <h3 class="box__title">重要なお知らせ</h3>
+        <p>会員に必ず届けたい内容をここに置きます。</p>
+      </div>
+
+      <h2 class="t-h2" data-editable>行事予定</h2>
+      <dl class="deflist fill" data-editable>
+        <div class="deflist__row"><dt class="deflist__key t-num">0/00</dt><dd>行事名（会場・時間）</dd></div>
+        <div class="deflist__row"><dt class="deflist__key t-num">0/00</dt><dd>行事名（会場・時間）</dd></div>
+        <div class="deflist__row"><dt class="deflist__key t-num">0/00</dt><dd>行事名（会場・時間）</dd></div>
+      </dl>
+
+    </article>
+  </div>
+  <span class="page__runhead" data-editable>お知らせ</span>
+  <span class="page__folio"></span>
+</section>
+
+
+<!-- ========================================================================
+     p8  編集後記・奥付
+     ===================================================================== -->
+<section class="page">
+  <div class="page__body">
+    <article class="article" data-article="colophon">
+
+      <h2 class="t-h1" data-editable>編集後記</h2>
+      <div class="t-body" data-editable>
+        <p>編集を終えての一言をここに。</p>
+      </div>
+
+      <!-- .colophon は margin-top:auto でページ下端に寄ります。
+           位置を余白で調整しないでください。 -->
+      <footer class="colophon" data-editable>
+        <p><strong>会報タイトル　第00号</strong>　2026年1月発行</p>
+        <p>発行：団体名　／　編集：広報委員会</p>
+        <p>〒000-0000　住所<br>
+           電話 000-000-0000　／　mail@example.org</p>
+      </footer>
+
+    </article>
+  </div>
+  <span class="page__runhead" data-editable>奥付</span>
+  <span class="page__folio"></span>
+</section>
+
+
+<!-- ========================================================================
+     号のメタ情報（要件13）
+     「計画」の工程の「号の設定」と「枠・記事・担当」がこのブロックを読み書きします。
+     手で編集しても構いませんが、JSON として妥当であることを保ってください。
+     ===================================================================== -->
+<!-- 号のメタ情報と編集計画。
+     会報を作り始める前に、「計画」の工程（編集長）で
+     枠・記事・占有ページ数を決め、記事ごとに担当者と締切を割り当ててください。
+     記事の掲載ページはここには持ちません。紙面の data-article から
+     毎回読み直すので、原稿を動かしても計画とずれません。 -->
+<script type="application/json" id="kaiho-meta">
+{
+  "issue": "第00号",
+  "date": "2026-01-15",
+  "format": "A4",
+  "schedule": {
+    "manuscript": "",
+    "proof1": "",
+    "proof2": "",
+    "final": ""
+  },
+  "editor": {
+    "name": "編集長：氏名",
+    "contact": "mail@example.org"
+  },
+  "plan": {
+    "articles": [
+      {
+        "id": "cover",
+        "title": "表紙・もくじ",
+        "template": "cover",
+        "pages": 1,
+        "owner": "",
+        "contact": "",
+        "current": "manuscript",
+        "schedule": {}
+      },
+      {
+        "id": "greeting",
+        "title": "巻頭あいさつ",
+        "template": "greeting",
+        "pages": 1,
+        "owner": "",
+        "contact": "",
+        "current": "manuscript",
+        "schedule": {}
+      },
+      {
+        "id": "feature",
+        "title": "特集（2ページ）",
+        "template": "feature",
+        "pages": 2,
+        "owner": "",
+        "contact": "",
+        "current": "manuscript",
+        "schedule": {}
+      },
+      {
+        "id": "report",
+        "title": "活動報告",
+        "template": "report",
+        "pages": 1,
+        "owner": "",
+        "contact": "",
+        "current": "manuscript",
+        "schedule": {}
+      },
+      {
+        "id": "data",
+        "title": "データで見る一年",
+        "template": "data",
+        "pages": 1,
+        "owner": "",
+        "contact": "",
+        "current": "manuscript",
+        "schedule": {}
+      },
+      {
+        "id": "notice",
+        "title": "お知らせ・行事予定",
+        "template": "notice",
+        "pages": 1,
+        "owner": "",
+        "contact": "",
+        "current": "manuscript",
+        "schedule": {}
+      },
+      {
+        "id": "colophon",
+        "title": "編集後記・奥付",
+        "template": "colophon",
+        "pages": 1,
+        "owner": "",
+        "contact": "",
+        "current": "manuscript",
+        "schedule": {}
+      }
+    ]
+  }
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ja" data-format="A4">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>会報テンプレート（4ページ）</title>
+<link rel="stylesheet" href="../system/tokens.css">
+<link rel="stylesheet" href="../brands/default/brand.css">
+<link rel="stylesheet" href="../system/print.css">
+<link rel="stylesheet" href="../system/components.css">
+<link rel="stylesheet" href="../system/editor.css">
+<!-- page-templates.js は editor.js より前に読むこと。
+     editor.js が window.KAIHO_PAGE_TEMPLATES を参照する前提のため、
+     順序が逆になると（page-templates.js 未定義のまま editor.js が動くと）壊れる。 -->
+<script src="../system/page-templates.js" defer></script>
+<script src="../system/editor.js" defer></script>
+</head>
+
+<!--
+  4ページ構成（表紙／記事／記事／お知らせ・奥付）。
+  中綴じ製本の都合上、総ページ数は 4 の倍数にすると印刷所での面付けが素直です。
+  ページは「計画」の工程の「＋ 頁」か、占有ページ数を増やして
+  「不足しているページを作る」で 20 ページまで増やせます（要件12）。
+-->
+<body>
+
+<!-- p1 表紙 -->
+<section class="page" data-folio="none">
+  <div class="page__body">
+    <article class="article" data-article="cover">
+      <header class="masthead">
+        <!-- ロゴのパスは、上の <link> と同じ brands/ フォルダを指す。
+             号を issues/ 以下に置いたら ../../brands/... に直すこと。 -->
+        <img class="masthead__logo" src="../brands/default/logo.svg" alt="団体名">
+        <h1 class="masthead__title" data-editable>会報タイトル</h1>
+        <p class="masthead__meta t-num" data-editable>第00号　2026年1月発行</p>
+      </header>
+
+      <figure class="fig--16x9 mb-8">
+        <img src="../system/placeholder.svg" alt="表紙写真の内容を説明する代替テキスト">
+        <figcaption data-editable>表紙写真のキャプション</figcaption>
+      </figure>
+
+      <p class="t-lead fill" data-editable>
+        表紙リード。この号の中心となる話題を 2〜3 行で。
+      </p>
+
+      <nav aria-label="目次">
+        <h2 class="t-h3">もくじ</h2>
+        <ul class="toc" data-toc="auto"></ul>
+      </nav>
+    </article>
+  </div>
+  <span class="page__folio"></span>
+</section>
+
+<!-- p2 記事 -->
+<section class="page">
+  <div class="page__body">
+    <article class="article" data-article="article-1">
+      <h2 class="t-h1" data-editable>記事タイトル</h2>
+      <p class="t-lead" data-editable>リード文。</p>
+      <div class="cols-2 cols-rule fill" data-editable>
+        <p>本文が入ります。</p>
+      </div>
+    </article>
+  </div>
+  <span class="page__runhead" data-editable>柱</span>
+  <span class="page__folio"></span>
+</section>
+
+<!-- p3 記事 -->
+<section class="page">
+  <div class="page__body">
+    <article class="article" data-article="article-2">
+      <h2 class="t-h1" data-editable>記事タイトル</h2>
+      <figure class="fig--16x9">
+        <img src="../system/placeholder.svg" alt="図版の内容を説明する代替テキスト">
+        <figcaption data-editable>図版のキャプション</figcaption>
+      </figure>
+      <div class="cols-2 fill" data-editable>
+        <p>本文が入ります。</p>
+      </div>
+    </article>
+  </div>
+  <span class="page__runhead" data-editable>柱</span>
+  <span class="page__folio"></span>
+</section>
+
+<!-- p4 お知らせ・奥付 -->
+<section class="page">
+  <div class="page__body">
+    <article class="article" data-article="notice">
+      <h2 class="t-h1" data-editable>お知らせ</h2>
+
+      <div class="box box--brand" data-editable>
+        <h3 class="box__title">重要なお知らせ</h3>
+        <p>会員に必ず届けたい内容。</p>
+      </div>
+
+      <h2 class="t-h2" data-editable>行事予定</h2>
+      <dl class="deflist" data-editable>
+        <div class="deflist__row"><dt class="deflist__key t-num">0/00</dt><dd>行事名（会場・時間）</dd></div>
+        <div class="deflist__row"><dt class="deflist__key t-num">0/00</dt><dd>行事名（会場・時間）</dd></div>
+      </dl>
+
+      <footer class="colophon" data-editable>
+        <p><strong>会報タイトル　第00号</strong>　2026年1月発行</p>
+        <p>発行：団体名　／　編集：広報委員会</p>
+        <p>〒000-0000　住所<br>電話 000-000-0000　／　mail@example.org</p>
+      </footer>
+    </article>
+  </div>
+  <span class="page__runhead" data-editable>お知らせ</span>
+  <span class="page__folio"></span>
+</section>
+
+<!-- 号のメタ情報と編集計画。
+     会報を作り始める前に、「計画」の工程（編集長）で
+     枠・記事・占有ページ数を決め、記事ごとに担当者と締切を割り当ててください。
+     記事の掲載ページはここには持ちません。紙面の data-article から
+     毎回読み直すので、原稿を動かしても計画とずれません。 -->
+<script type="application/json" id="kaiho-meta">
+{
+  "issue": "第00号",
+  "date": "2026-01-15",
+  "format": "A4",
+  "schedule": {
+    "manuscript": "",
+    "proof1": "",
+    "proof2": "",
+    "final": ""
+  },
+  "editor": {
+    "name": "編集長：氏名",
+    "contact": "mail@example.org"
+  },
+  "plan": {
+    "articles": [
+      {
+        "id": "cover",
+        "title": "表紙・もくじ",
+        "template": "cover",
+        "pages": 1,
+        "owner": "",
+        "contact": "",
+        "current": "manuscript",
+        "schedule": {}
+      },
+      {
+        "id": "article-1",
+        "title": "記事1",
+        "template": "free",
+        "pages": 1,
+        "owner": "",
+        "contact": "",
+        "current": "manuscript",
+        "schedule": {}
+      },
+      {
+        "id": "article-2",
+        "title": "記事2",
+        "template": "free",
+        "pages": 1,
+        "owner": "",
+        "contact": "",
+        "current": "manuscript",
+        "schedule": {}
+      },
+      {
+        "id": "notice",
+        "title": "お知らせ・奥付",
+        "template": "notice",
+        "pages": 1,
+        "owner": "",
+        "contact": "",
+        "current": "manuscript",
+        "schedule": {}
+      }
+    ]
+  }
+}
+</script>
+
+</body>
+</html>

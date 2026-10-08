@@ -1,0 +1,198 @@
+/* ============================================================================
+   kaiho-studio / system/print.css
+   ----------------------------------------------------------------------------
+   判型・面付け・ページ機構。
+   ここで定義した寸法は mm 基準なので、画面プレビューと印刷で同一になる。
+   （要件9「プレビューは印刷用HTMLを忠実に再現する」の根拠がこれ）
+
+   画面側の作業台まわり（背景・影・ページ間の余白）は editor.css が担当し、
+   このファイルは一切の画面専用装飾を持たない。
+   ========================================================================== */
+
+/* --- 用紙設定 ------------------------------------------------------------ */
+@page {
+  size: A4 portrait;
+  margin: 0;            /* 余白は .page の padding で持つ（画面と一致させるため） */
+}
+
+/* 塗り足しあり入稿用。data-bleed="on" を <body> に付けると裁ち代を含む */
+@page bleed {
+  size: 216mm 303mm;
+  margin: 0;
+}
+
+/* --- 判型の定義 ---------------------------------------------------------- */
+/* 要件11: 現在選択できるのは A4 のみ。
+   B5/A5 を解禁するときは、ここにブロックを追加し
+   editor.js の FORMATS に登録する。それ以外の改修は不要。 */
+[data-format="A4"] {
+  --page-width:  210mm;
+  --page-height: 297mm;
+}
+/* 将来の拡張点（未解禁・意図的にコメントアウト）
+[data-format="B5"] { --page-width: 182mm; --page-height: 257mm; }
+[data-format="A5"] { --page-width: 148mm; --page-height: 210mm; }
+*/
+
+/* --- ドキュメント -------------------------------------------------------- */
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-family: var(--brand-font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  letter-spacing: var(--ls-body);
+  font-feature-settings: "palt" 1;      /* 和文プロポーショナル詰め */
+  text-rendering: optimizeLegibility;
+  print-color-adjust: exact;            /* 地色・ベタ面を印刷で飛ばさない */
+  -webkit-print-color-adjust: exact;
+}
+
+/* --- ページ -------------------------------------------------------------- */
+.page {
+  position: relative;
+  box-sizing: border-box;
+  width:  var(--page-width);
+  height: var(--page-height);
+  overflow: hidden;                     /* 版面外への溢れを物理的に止める */
+  background: var(--c-surface);
+  break-after: page;
+  page-break-after: always;             /* 旧仕様の保険 */
+}
+.page:last-of-type { break-after: auto; page-break-after: auto; }
+
+/* 見開きを想定した左右非対称マージン。
+   1ページ目を右起こし（奇数=右ページ）とする。 */
+.page { padding: var(--page-margin-top) var(--page-margin-outer)
+                 var(--page-margin-bottom) var(--page-margin-inner); }
+.page:nth-of-type(even),
+.page[data-side="left"] {
+  padding-left:  var(--page-margin-outer);
+  padding-right: var(--page-margin-inner);
+}
+.page[data-side="right"] {
+  padding-left:  var(--page-margin-inner);
+  padding-right: var(--page-margin-outer);
+}
+
+/* 版面（テキストが流れる領域）。柱とノンブルの分を差し引く */
+.page__body {
+  position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 全面裁ち落とし用。表紙・扉など */
+.page--full { padding: 0; }
+.bleed-box {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* --- 柱（ランニングヘッド）とノンブル ------------------------------------ */
+.page__runhead,
+.page__folio {
+  position: absolute;
+  font-size: var(--fs-caption);
+  color: var(--c-text-muted);
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+.page__runhead { top: calc(var(--page-margin-top) - 8mm); }
+.page__folio   { bottom: calc(var(--page-margin-bottom) - 9mm); }
+
+.page:nth-of-type(odd)  .page__runhead,
+.page[data-side="right"] .page__runhead { right: var(--page-margin-outer); }
+.page:nth-of-type(even) .page__runhead,
+.page[data-side="left"]  .page__runhead { left:  var(--page-margin-outer); }
+
+.page:nth-of-type(odd)  .page__folio,
+.page[data-side="right"] .page__folio { right: var(--page-margin-outer); }
+.page:nth-of-type(even) .page__folio,
+.page[data-side="left"]  .page__folio { left:  var(--page-margin-outer); }
+
+/* ノンブルはページ番号を CSS カウンタで自動採番する。
+   手で番号を打たないこと（ページ増減で必ず狂うため）。 */
+body { counter-reset: folio; }
+.page { counter-increment: folio; }
+.page__folio::after { content: counter(folio); }
+.page[data-folio="none"] .page__folio { display: none; }   /* 表紙など */
+
+/* --- 段組ユーティリティ -------------------------------------------------- */
+.cols-2 { column-count: 2; column-gap: var(--grid-gutter); }
+.cols-3 { column-count: 3; column-gap: var(--grid-gutter); }
+.cols-rule { column-rule: var(--rule-hairline) solid var(--c-rule); }
+.col-span-all { column-span: all; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns), 1fr);
+  gap: var(--grid-gutter);
+}
+
+/* --- 改ページ制御 -------------------------------------------------------- */
+h1, h2, h3 { break-after: avoid; page-break-after: avoid; }
+figure, table, .box, .callout { break-inside: avoid; page-break-inside: avoid; }
+p { orphans: 2; widows: 2; }
+
+/* --- 台割シートの表示条件 ------------------------------------------------
+   台割は会報の紙面ではなく制作用の帳票なので、
+   data-view="plan" のときだけ現れ、そのときは紙面の側を伏せる。
+   1 つの HTML から「会報」と「台割」の 2 種類の出力を作り分けている。
+   画面と印刷で条件を共有するため、editor.css ではなくここに置く。
+   ------------------------------------------------------------------------ */
+[data-view="plan"] .plan-sheet { display: block; }
+[data-view="plan"] .page { display: none; }
+
+.plan-sheet .plan-map__cell,
+.plan-sheet .plan-table tr { break-inside: avoid; page-break-inside: avoid; }
+.plan-sheet h2 { break-after: avoid; page-break-after: avoid; }
+
+/* --- 印刷時 -------------------------------------------------------------- */
+@media print {
+  /* 画面専用要素は一切刷らない */
+  .screen-only,
+  .editor-bar,
+  .mobile-nav,
+  .editor-panel,
+  .view-dock,
+  .settings-view,
+  .login-view,
+  .page-tools,
+  .focus-veil,
+  .share-handle,
+  .continuation-controls,
+  .page__guides { display: none !important; }
+
+  body { background: none; }
+  .page { margin: 0; box-shadow: none; }
+
+  /* 校正紙にだけ制作情報を出す（要件13）。
+     data-proof は「校正」の工程に入ると editor.js が付け、ほかの工程では外す。
+     号の HTML には保存しない（docs/00 決定 14）。 */
+  .production-slug { display: none; }
+  [data-proof="on"] .production-slug { display: flex; }
+
+  /* 台割シートの用紙余白は .plan-sheet 自身の padding が持つ。
+     @page の名前付きページ（@page plan）はブラウザによる差が大きいので使わない。
+     用紙設定は会報と同じ「A4・余白ゼロ」のまま通す。 */
+  [data-view="plan"] body { display: block; }
+}
+
+/* 塗り足し入稿モード */
+[data-bleed="on"] .page {
+  width:  calc(var(--page-width)  + var(--page-bleed) * 2);
+  height: calc(var(--page-height) + var(--page-bleed) * 2);
+  padding: calc(var(--page-margin-top)    + var(--page-bleed))
+           calc(var(--page-margin-outer)  + var(--page-bleed))
+           calc(var(--page-margin-bottom) + var(--page-bleed))
+           calc(var(--page-margin-inner)  + var(--page-bleed));
+}
+@media print {
+  [data-bleed="on"] { page: bleed; }
+}
