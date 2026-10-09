@@ -2841,12 +2841,18 @@
       el("p", { "class": "panel-note", text: "役割は会報ごとに持ちます。編集長は計画・入稿と設定、担当者は割り当てられた記事の原稿と全記事の校正コメント、閲覧者は読むだけです。" }),
       el("p", { "class": "panel-note", text: "合言葉を設定した人は、ログインのときに入力が要ります。合言葉は本人確認の仕組みではありません（号の HTML は誰でも書き換えられます）。" })
     ]);
-    var tbody = el("tbody");
+    var tbody = el("tbody", { role: "rowgroup" });
+    /* 同じ入力欄を表とカードで使い、画面幅を変えても編集中の値を失わない。 */
+    function memberCell(label, kind, children) {
+      return el("td", { role: "cell", "class": "member-field member-field--" + kind }, [
+        el("span", { "class": "member-field__label", text: label })
+      ].concat(children));
+    }
     members().forEach(function (m, idx) {
       var count = primaryArticles().filter(function (a) { return a.owner === m.name; }).length;
       var passCell = el("div", { "class": "member-pass" }, [
         el("span", { "class": "member-pass__state", "data-set": m.pass ? "true" : "false", text: m.pass ? "設定済み" : "なし" }),
-        el("button", { type: "button", text: m.pass ? "変える" : "設定する", onclick: function () {
+        el("button", { type: "button", text: m.pass ? "変える" : "設定する", "aria-label": m.name + "の合言葉を" + (m.pass ? "変更" : "設定"), onclick: function () {
           var p = prompt(m.name + " の合言葉（空欄で外す）", "");
           if (p === null) { return; }
           if (!p) { m.pass = ""; settingsChanged(); renderSettings(); return; }
@@ -2854,8 +2860,8 @@
             .catch(function (e) { alert(e.message); });
         } })
       ]);
-      tbody.appendChild(el("tr", null, [
-        el("td", null, [el("input", { type: "text", value: m.name, "aria-label": "氏名", onchange: function () {
+      tbody.appendChild(el("tr", { role: "row", "class": "member-card" }, [
+        memberCell("氏名", "name", [el("input", { type: "text", value: m.name, "aria-label": "氏名", onchange: function () {
           var v = this.value.trim();
           if (!v || (v !== m.name && memberByName(v))) { this.value = m.name; showBarToast("同じ名前の人がいるか、空欄です"); return; }
           var old = m.name;
@@ -2867,7 +2873,7 @@
           m.name = v;
           settingsChanged(); syncMeta(); renderSettings();
         } })]),
-        el("td", null, [el("select", { "aria-label": "役割", onchange: function () {
+        memberCell("役割", "role", [el("select", { "aria-label": "役割", onchange: function () {
           if (m.role === "editor" && this.value !== "editor" && editorCount() <= 1) {
             this.value = "editor"; showBarToast("編集長が 1 人もいなくなるので変えられません"); return;
           }
@@ -2875,11 +2881,11 @@
         } }, ["editor", "staff", "viewer"].map(function (r) {
           return el("option", { value: r, text: ROLE_LABELS[r], selected: m.role === r ? "selected" : null });
         }))]),
-        el("td", null, [el("input", { type: "text", value: m.contact, "aria-label": "連絡先",
+        memberCell("連絡先", "contact", [el("input", { type: "text", value: m.contact, "aria-label": "連絡先",
           onchange: function () { m.contact = this.value; settingsChanged(); } })]),
-        el("td", null, [passCell]),
-        el("td", { "class": "t-num", text: count ? count + " 本" : "—" }),
-        el("td", null, [el("button", { type: "button", "class": "member-del", text: "外す", onclick: function () {
+        memberCell("合言葉", "pass", [passCell]),
+        memberCell("この号の担当", "count", [el("span", { "class": "member-count t-num", text: count ? count + " 本" : "担当なし" })]),
+        memberCell("", "actions", [el("button", { type: "button", "class": "member-del", text: "名簿から外す", "aria-label": m.name + "を名簿から外す", onclick: function () {
           if (m.role === "editor" && editorCount() <= 1) { showBarToast("編集長が 1 人もいなくなるので外せません"); return; }
           if (m === state.viewer) { showBarToast("ログイン中の人は外せません"); return; }
           if (!confirm(m.name + " を名簿から外します。" + (count ? "\nこの号の担当記事（" + count + " 本）は担当者のまま残ります。" : ""))) { return; }
@@ -2887,9 +2893,9 @@
         } })])
       ]));
     });
-    main.appendChild(el("table", { "class": "member-table" }, [
-      el("thead", null, [el("tr", null, ["氏名", "役割", "連絡先", "合言葉", "この号の担当", ""].map(function (h) {
-        return el("th", { text: h });
+    main.appendChild(el("table", { role: "table", "aria-label": "会報の名簿", "class": "member-table" }, [
+      el("thead", { role: "rowgroup" }, [el("tr", { role: "row" }, ["氏名", "役割", "連絡先", "合言葉", "この号の担当", ""].map(function (h) {
+        return el("th", { role: "columnheader", text: h });
       }))]),
       tbody
     ]));

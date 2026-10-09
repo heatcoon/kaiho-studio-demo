@@ -836,6 +836,7 @@
   .member-table th { text-align: left; font-weight: 400; color: #9aa1ab; font-size: 12px; padding: 4px 6px; border-bottom: 1px solid #454a52; }
   .member-table td { padding: 4px 6px; border-bottom: 1px solid #383d45; }
   .member-table input, .member-table select { margin-top: 0 !important; }
+  .member-field__label { display: none; }
   .settings-main--wide .panel-btn { max-width: 760px; }
 
   .focus-pick { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 12px; color: #c9ced6; }
@@ -1066,6 +1067,7 @@
     body[data-settings="open"] .mobile-nav { display: none; }
     body[data-settings="open"] .settings-view { bottom: 0; }
     .settings-body { flex-direction: column; overflow-y: auto; }
+    .settings-body > .panel-lock { position: static; margin: 12px 16px; }
     .tpl-side { width: auto; overflow: visible; padding: 12px; border-right: 0; border-bottom: 1px solid #454a52; }
     .tpl-list { flex-direction: row; overflow-x: auto; }
     .tpl-item { min-width: 120px; flex: none; }
@@ -1073,8 +1075,28 @@
     .tpl-edit { flex-direction: column; }
     .tpl-edit__form { width: 100%; }
     .tpl-preview { width: 100%; overflow-x: auto; }
-    .settings-main--wide { overflow-x: auto; }
-    .member-table { min-width: 680px; }
+    .settings-main--wide { overflow-x: hidden; }
+    .member-table { display: block; width: 100%; min-width: 0; margin: 20px 0; }
+    .member-table thead { display: none; }
+    .member-table tbody { display: grid; gap: 16px; }
+    .member-table .member-card {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 14px 12px; padding: 18px; border: 1px solid #4c6078; border-radius: 14px;
+      background: #182330; box-shadow: 0 4px 14px #0002;
+    }
+    .member-table .member-field { display: block; min-width: 0; padding: 0; border: 0; }
+    .member-field__label { display: block; margin-bottom: 6px; color: #bcc8d6; font-size: 12px; font-weight: 600; }
+    .member-field--name { grid-column: 1 / -1; order: 0; }
+    .member-field--role { order: 1; }
+    .member-field--count { order: 2; }
+    .member-field--contact { grid-column: 1 / -1; order: 3; }
+    .member-field--pass { grid-column: 1 / -1; order: 4; }
+    .member-field--actions { grid-column: 1 / -1; order: 5; border-top: 1px solid #354658 !important; padding-top: 12px !important; }
+    .member-table .member-field--name input[type="text"] { font-weight: 700; font-size: 18px; }
+    .member-count { display: flex; align-items: center; min-height: 44px; color: #c5e4fc; }
+    .member-table .member-pass { justify-content: space-between; gap: 12px; white-space: normal; }
+    .member-table .member-pass button, .member-table .member-del { min-height: 44px; padding: 10px 14px; border-radius: 8px; }
+    .member-table .member-del { width: 100%; text-align: center; }
     .stage-grid-wrap { overflow-x: auto; }
     .editor-panel input, .editor-panel select, .editor-panel textarea, .settings-main input, .settings-main select { font-size: 16px; }
     .page-tools { opacity: 1; }
