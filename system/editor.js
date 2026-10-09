@@ -3220,7 +3220,11 @@
   function renderSettings() {
     var old = $(".settings-view");
     if (old) { old.remove(); }
-    var tabs = [{ id: "sectionTemplates", label: "セクションテンプレート" }, { id: "articleTemplates", label: "記事テンプレート" }, { id: "members", label: "名簿" }];
+    var tabs = [
+      { id: "sectionTemplates", label: "セクションテンプレート", title: "セクション", suffix: "テンプレート", description: "記事をまとめる型" },
+      { id: "articleTemplates", label: "記事テンプレート", title: "記事", suffix: "テンプレート", description: "1本の記事の型" },
+      { id: "members", label: "名簿", title: "名簿", suffix: "", description: "人・役割・連絡先" }
+    ];
     var view = el("div", { "class": "settings-view" }, [
       el("div", { "class": "settings-head" }, [
         el("h1", { text: "設定" }),
@@ -3238,10 +3242,23 @@
     $("input", identity).setAttribute("aria-describedby", "kaiho-issue-name-help");
     if (!isEditor()) { makeReadOnly(identity); }
     view.appendChild(identity);
-    view.appendChild(el("div", { "class": "settings-tabs seg", "aria-label": "設定の種類" }, tabs.map(function (t) {
-      return el("button", { type: "button", text: t.label, "aria-pressed": state.settingsTab === t.id ? "true" : "false",
-        onclick: function () { state.settingsTab = t.id; state.templateId = null; renderSettings(); } });
-    })));
+    view.appendChild(el("nav", { "class": "settings-navigation", "aria-label": "設定項目の切り替え" }, [
+      el("p", { "class": "settings-navigation__label", text: "設定する項目を選ぶ" }),
+      el("div", { "class": "settings-tabs" }, tabs.map(function (t) {
+        var selected = state.settingsTab === t.id;
+        return el("button", { type: "button", "aria-label": t.label, "aria-pressed": selected ? "true" : "false",
+          "aria-current": selected ? "true" : null,
+          onclick: function () {
+            state.settingsTab = t.id; state.templateId = null; renderSettings();
+            $('.settings-tabs button[aria-current="true"]').focus({ preventScroll: true });
+          }
+        }, [
+          el("span", { "class": "settings-tab__title" }, [el("span", { text: t.title }), el("span", { text: t.suffix })]),
+          el("span", { "class": "settings-tab__description", text: t.description }),
+          el("span", { "class": "settings-tab__state", text: selected ? "✓ 表示中" : "開く →" })
+        ]);
+      }))
+    ]));
     var body = el("div", { "class": "settings-body" });
     if (state.settingsTab === "members") { buildMembersPane(body); } else { buildTemplatesPane(body); }
     if (!isEditor() && state.settingsTab !== "members") {
