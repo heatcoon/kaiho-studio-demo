@@ -909,6 +909,11 @@
   .article-card__sub:hover { background: #414751; }
 
   /* 計画の工程の「ページの増減」行 */
+  .page-assign { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .page-order-card .page-assign { margin-top: 12px; }
+  .page-order-card .page-tools__pick { width: 100%; max-width: none; min-width: 0; }
+  .page-order-card .page-tools__add { max-width: none; padding: 8px 12px; }
+  .page-order-card .page-tools__add:disabled { opacity: 0.4; cursor: default; }
   .page-order-card { padding: 12px; margin: 8px 0; border: 1px solid #59616d; border-radius: 8px; background: #303640; }
   .page-order-title { margin: 6px 0 10px; overflow-wrap: anywhere; }
   .page-actions { display: flex; flex-wrap: wrap; gap: 6px; }

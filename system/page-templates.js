@@ -1,7 +1,7 @@
 /* ============================================================================
    kaiho-studio / system/page-templates.js
    ----------------------------------------------------------------------------
-   ページテンプレート（docs/10-page-templates.md）の定義。
+   記事テンプレート（docs/10-page-templates.md）の定義。
 
    「号テンプレート」（templates/basic-8p.html 等、号まるごと）と違い、
    ここで定義するのは「記事 1 本ぶんの雛型」。編集計画の記事が
@@ -14,7 +14,7 @@
    （docs/10 §3.2, §4 の「実装時に必ず直すもの」）。
 
    editor.js より前に読み込むこと。editor.js が
-   window.KAIHO_PAGE_TEMPLATES を参照する前提で書かれる。
+   window.KAIHO_ARTICLE_TEMPLATES を参照する前提で書かれる。
    号テンプレートの <script> の並びは変えない
    （tokens → brand → print → components → editor.css の順で CSS を読み、
    その後に page-templates.js → editor.js の順で JS を読む）。
@@ -33,7 +33,7 @@
      （占有ページ数は編集長が後から増やせるため）。実際に DOM へ適用するのは
      editor.js 側の仕事なので、このファイルはデータを並べるだけに留める。 */
 
-  window.KAIHO_PAGE_TEMPLATES = [
+  window.KAIHO_ARTICLE_TEMPLATES = [
 
     /* ------------------------------------------------------------------
        表紙・もくじ（templates/basic-8p.html p1 から起こす）
@@ -362,5 +362,8 @@
     }
 
   ];
+
+  /* 既存の号・見本帳からの参照を保つ互換名。 */
+  window.KAIHO_PAGE_TEMPLATES = window.KAIHO_ARTICLE_TEMPLATES;
 
 })();

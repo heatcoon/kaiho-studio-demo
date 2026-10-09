@@ -84,7 +84,7 @@
   var ROLE_LABELS = { editor: "編集長", staff: "担当者", viewer: "閲覧者" };
 
   var STEP_HELP = {
-    plan: "記事と担当者を決め、ページを用意しましょう。まず「次にやること」から進められます。",
+    plan: "記事ごとに型と担当者を決め、「ページ・記事の配置」からページに置きましょう。",
     write: "記事の「原稿を書く」から紙面を開き、青い枠の中を押して入力します。変更したら保存しましょう。",
     proof: "紙面を読み、気になる文章を選んでコメントを付けます。確認が終わった記事を校了にします。",
     release: "検査と確認項目を見直してから、印刷用データを出力します。背景あり・A4・倍率100%で印刷してください。"
@@ -320,6 +320,7 @@
     });
 
     migrateZeroPageArticles(meta);
+    migrateArticleTemplates(meta);
     return meta;
   }
 
@@ -342,12 +343,27 @@
         if (prev.pages !== undefined && prev.pages !== "") { f.pages = parseInt(prev.pages, 10) || 1; }
         meta.plan.frames.push(f);
         covered[prev.id] = true;
-        delete prev.pages; delete prev.template;
+        delete prev.pages;
       }
       f.articles.push(a.id);
       covered[a.id] = true;
-      delete a.pages; delete a.template;
+      delete a.pages;
     }
+  }
+
+  /* 旧枠のテンプレートを記事へ移す。原稿DOMには触れず、明示済みの型を優先する。 */
+  function migrateArticleTemplates(meta) {
+    meta.plan.frames.forEach(function (frame) {
+      (frame.articles || []).forEach(function (id) {
+        var a = meta.plan.articles.find(function (item) { return item.id === id; });
+        if (a && !a.continues && !a.template) { a.template = frame.template || "free"; }
+      });
+      delete frame.template;
+    });
+    meta.plan.articles.forEach(function (a) {
+      if (a.continues) { delete a.template; }
+      else if (!a.template) { a.template = "free"; }
+    });
   }
 
   /* meta を DOM へ書き戻す。中身が変わったときだけ書いて「未保存」にする。
@@ -407,7 +423,7 @@
   }
 
   /* ==========================================================================
-     ページテンプレート（system/page-templates.js ＋ 設定の上書き）
+     記事テンプレート（system/page-templates.js ＋ 設定の上書き）
      --------------------------------------------------------------------------
      過去号は page-templates.js を読み込まない（docs/08 の worktree で当時の
      システムごと開く前提）。無くても例外を出さず "free" 1 件で動く。
@@ -422,7 +438,7 @@
   ];
 
   function baseTemplates() {
-    var list = window.KAIHO_PAGE_TEMPLATES;
+    var list = window.KAIHO_ARTICLE_TEMPLATES || window.KAIHO_PAGE_TEMPLATES;
     return (Array.isArray(list) && list.length) ? list : FALLBACK_TEMPLATES;
   }
 
@@ -458,11 +474,11 @@
     return copy;
   }
 
-  function pageTemplates() { return state.templates || baseTemplates(); }
+  function articleTemplates() { return state.templates || baseTemplates(); }
 
   /* 見つからなければ free、free も無ければ配列の先頭を返す。null は返さない契約 */
   function templateById(id) {
-    var list = pageTemplates();
+    var list = articleTemplates();
     var found = null, free = null;
     for (var i = 0; i < list.length; i++) {
       if (list[i].id === id) { found = list[i]; }
@@ -473,7 +489,7 @@
 
   /* templateById() と違い、見つからなければ null。綴り間違いを検査で拾うためだけに使う */
   function findTemplateRaw(id) {
-    return pageTemplates().find(function (t) { return t.id === id; }) || null;
+    return articleTemplates().find(function (t) { return t.id === id; }) || null;
   }
 
   /* ==========================================================================
@@ -511,7 +527,7 @@
       }
       if (a.continues) { return; }   /* 枠に入っていない続きは検査に任せる */
       list.push({
-        id: "_implicit-" + a.id, title: a.title, template: a.template || "free",
+        id: "_implicit-" + a.id, title: a.title,
         pages: a.pages, articles: [a.id], implicit: true
       });
     });
@@ -524,7 +540,10 @@
     return effectiveFrames().find(function (f) { return (f.articles || []).indexOf(articleId) >= 0; }) || null;
   }
 
-  function frameTemplate(frame) { return templateById(frame && frame.template); }
+  function articleTemplate(a) {
+    var owner = a && ownerArticle(a);
+    return templateById(owner && owner.template);
+  }
 
   /* pages が未指定ならテンプレートの既定値に落とす */
   function framePlannedPages(frame) {
@@ -532,7 +551,9 @@
       var p = parseInt(frame.pages, 10);
       if (!isNaN(p) && p >= 0) { return Math.min(p, MAX_PAGES); }
     }
-    return frameTemplate(frame).pages || 1;
+    return Math.max.apply(null, [1].concat((frame.articles || []).map(function (id) {
+      return articleTemplate(articleById(id)).pages || 1;
+    })));
   }
 
   /* 総ページ数は枠の pages の合計（決定 11）。手入力の欄は無い */
@@ -546,13 +567,13 @@
     if (isNaN(v)) { delete target.pages; } else { target.pages = Math.max(0, Math.min(MAX_PAGES, v)); }
   }
 
-  function setFrameTemplate(frame, id) {
-    var target = frame.implicit ? articleById(frame.articles[0]) : frame;
-    target.template = id;
-    /* テンプレートを変えたら占有ページ数も新しい既定値にする。
-       未指定のまま残すと、page-templates.js の無い環境（過去号を worktree で
-       開いた場合など）で開き直したときに占有ページ数が黙って変わる */
-    target.pages = templateById(id).pages || 1;
+  function setArticleTemplate(a, id) {
+    if (!isEditor() || a.continues) { return; }
+    a.template = id;
+    var frame = frameOfArticle(a.id);
+    /* 他の記事と分け合う枠のページ数は、型の変更だけでは増減させない。 */
+    if (frame && frame.implicit) { a.pages = templateById(id).pages || 1; }
+    rerenderAll();
   }
 
   /* 割合: 5%刻みに丸め、0〜100へ収める */
@@ -678,10 +699,10 @@
     if (!frame.implicit) { return frame; }
     var a = articleById(frame.articles[0]);
     var f = {
-      id: newFrameId(), title: a.title, template: a.template || "free",
+      id: newFrameId(), title: a.title,
       pages: framePlannedPages(frame), articles: [a.id]
     };
-    delete a.template; delete a.pages;
+    delete a.pages;
     frames().push(f);
     return f;
   }
@@ -700,7 +721,7 @@
     var f = explicitFrame(frame);
     var lastId = f.articles[f.articles.length - 1];
     var a = addArticle({ share: 50 });
-    delete a.template; delete a.pages;
+    delete a.pages;
     f.articles.push(a.id);
     if (lastId) { placeAfter(a.id, lastId); }
     /* 先頭の記事が「残り」のままだと、2本とも余りを取り合う */
@@ -816,7 +837,7 @@
     var placement = articlePlacement();
     var items = primaryArticles()
       .map(function (a) { return { a: a, pl: mergedPlacement(a.id, placement) }; })
-      .filter(function (x) { return x.pl && frameTemplate(frameOfArticle(x.a.id)).toc; })
+      .filter(function (x) { return x.pl && articleTemplate(x.a).toc; })
       .sort(function (x, y) { return x.pl.first - y.pl.first; });
 
     containers.forEach(function (list) {
@@ -923,21 +944,8 @@
 
     var tools = el("div", { "class": "page-tools" }, chips);
     if (editing) {
-      /* 選べるのは、まだ紙面のどこにも無い記事だけ。既に載っている記事を
-         別のページへ広げたいときは、計画で「続き」を作る（決定 13） */
-      var placement = articlePlacement();
-      var choices = articles().filter(function (a) { return !placement[a.id]; });
-      var pick = el("select", { "class": "page-tools__pick", title: "このページに足す記事" },
-        [el("option", { value: "", text: "新しい記事として足す" })].concat(choices.map(function (a) {
-          return el("option", { value: a.id, text: displayTitleOf(a) });
-        })));
       tools.appendChild(pageActions(page));
-      tools.appendChild(pick);
-      tools.appendChild(el("button", {
-        type: "button", "class": "page-tools__add", text: "＋ 記事",
-        title: "このページに記事の入れ物を足す",
-        onclick: function () { addArticleToPage(page, pick.value || null); }
-      }));
+      tools.appendChild(buildArticleAssignment(page));
     }
     page.appendChild(tools);
   }
@@ -954,17 +962,6 @@
            '    <p>本文をここに入力します。</p>\n' +
            '  </div>\n' +
            '</article>';
-  }
-
-  /* 枠の中の記事（1ページに複数載る記事）の入れ物。割合は値だけを渡す */
-  function blockMarkup(a) {
-    var cls = "article article--block" + (a.share === "rest" ? " article--rest" : "");
-    var style = a.share === "rest" ? "" : ' style="--share: ' + a.share + '%"';
-    var inner = a.continues
-      ? '  <p data-editable>（「' + escapeHTML(displayTitleOf(a)) + '」の本文が続きます）</p>\n'
-      : '  <h2 class="t-h2" data-editable>' + escapeHTML(a.title || "記事タイトル") + '</h2>\n' +
-        '  <p data-editable>本文をここに入力します。</p>\n';
-    return '<article class="' + cls + '" data-article="' + a.id + '"' + style + '>\n' + inner + '</article>';
   }
 
   /* .page を1枚組み立てる。まだ DOM には挿入しない（挿入位置は呼び出し側の事情） */
@@ -1006,14 +1003,28 @@
     return groups.slice(0, Math.max(planned, 1));
   }
 
-  function composeGroupPage(frame, group, pageIndex) {
-    var tmpl = frameTemplate(frame);
-    if ((frame.articles || []).length <= 1) {
-      var id = group[0];
-      var body = tmpl.markup ? tmpl.markup(id, pageIndex) : articleMarkup(id, true);
-      return composePage(body, tmpl, pageIndex);
+  /* 同じページを分け合う場合も、各記事の型から入れ物を作る。 */
+  function articleHolder(a, pageIndex, block) {
+    var tmpl = articleTemplate(a), holder = el("div");
+    var index = a.continues ? 1 : pageIndex || 0;
+    holder.innerHTML = rebaseMarkup(tmpl.markup ? tmpl.markup(a.id, index) : articleMarkup(a.id, !index));
+    var node = $('[data-article]', holder);
+    if (!node) {
+      node = el("article", { "class": "article", "data-article": a.id });
+      while (holder.firstChild) { node.appendChild(holder.firstChild); }
     }
-    return composePage(group.map(function (id) { return blockMarkup(articleById(id)); }).join("\n"), tmpl, pageIndex);
+    node.setAttribute("data-article", a.id);
+    if (block) { node.classList.add("article--block", "article--flow"); }
+    return node;
+  }
+
+  function composeGroupPage(frame, group, pageIndex) {
+    var shared = (frame.articles || []).length > 1;
+    var body = group.map(function (id) {
+      return articleHolder(articleById(id), pageIndex, shared).outerHTML;
+    }).join("\n");
+    /* 柱・ノンブルはページの設定。複数の記事の型で奪い合わない。 */
+    return composePage(body, group.length === 1 ? articleTemplate(articleById(group[0])) : null, pageIndex);
   }
 
   function insertAfterNode(node, anchor) {
@@ -1030,7 +1041,7 @@
 
      この処理には削除の経路を一切持たせない。押すのは編集長で、消えるとしたら
      担当者が書いた原稿になる。一括操作の確認ダイアログは押し間違いが起きやすく、
-     安全な削除手段（「− 頁」と、記事入れ物の「✕」。どちらも対象が目に見えている）
+     安全な削除手段（各ページの「削除」と、記事入れ物の「✕」。どちらも対象が目に見えている）
      が既にあるので、それで足りる。計画より多いページ・計画に無い記事は、
      ここでは何もせず検査に指摘を委ねる。
 
@@ -1072,9 +1083,8 @@
             var body = $(".page__body", present);
             group.forEach(function (id) {
               if (body && !articlePages(id).length) {
-                var holder = el("div");
-                holder.innerHTML = rebaseMarkup(blockMarkup(articleById(id)));
-                body.appendChild(holder.firstElementChild);
+                $$("[data-article]", body).forEach(function (node) { node.classList.add("article--block", "article--flow"); });
+                body.appendChild(articleHolder(articleById(id), 0, true));
                 created++;
               }
             });
@@ -1109,13 +1119,11 @@
     rerenderAll();
   }
 
-  /* ページを 1 枚足す。新しい記事（暗黙の枠）として計画にも登録する。
-     紙面と計画が同時に増えるので、割り当て忘れが起きない */
+  /* ページは記事から独立した器。末尾に白紙を足し、あとから記事を配置する。 */
   function addPage() {
+    if (!isEditor() || state.step !== "plan") { return; }
     if (pages().length >= MAX_PAGES) { alert("ページ数の上限は " + MAX_PAGES + " ページです。"); return; }
-    var a = addArticle({ pages: 1 });
-    var tmpl = templateById(a.template);
-    var page = composePage(tmpl.markup ? tmpl.markup(a.id, 0) : articleMarkup(a.id, true), tmpl, 0);
+    var page = composePage("", null, 0);
     var list = pages();
     insertAfterNode(page, list[list.length - 1] || null);
     afterPagesChanged();
@@ -1165,7 +1173,7 @@
 
   function buildPageOrder() {
     var list = el("div", { "class": "page-order" }, [el("p", { "class": "panel-note",
-      text: "ページは末尾に追加します。並べ替えるとページ番号も更新されます。削除しても記事の計画は残ります。" })]);
+      text: "各ページに記事を選んで配置します。新しい記事は型を選んで作れます。ページは末尾に追加。移動は原稿を保持し、削除は記事の計画を残します。" })]);
     pages().forEach(function (page, index) {
       var titles = [], ids = [];
       $$("[data-article]", page).forEach(function (node) {
@@ -1175,39 +1183,72 @@
       list.appendChild(el("div", { "class": "page-order-card" }, [
         el("strong", { text: "p." + (index + 1) }),
         el("div", { "class": "page-order-title", text: titles.join("／") || "空のページ" }),
-        pageActions(page, "panel")
+        pageActions(page, "panel"),
+        buildArticleAssignment(page)
       ]));
     });
     return list;
   }
 
-  /* ページに記事の入れ物を 1 つ足す。
-     ページに既に記事があれば、その記事の枠に入れる（1 ページに 2 本＝同じ枠の中の割合）。
-     記事を指定しなければ新しい記事として計画にも登録する */
-  function addArticleToPage(page, articleId) {
-    var body = $(".page__body", page);
-    if (!body) { return; }
-    var tools = $(".page-tools", page);
-    if (tools && tools.contains(document.activeElement)) { document.activeElement.blur(); }
+  function buildArticleAssignment(page) {
+    var placement = articlePlacement();
+    var choices = articles().filter(function (a) { return !placement[a.id]; });
+    var pick = el("select", { "class": "page-tools__pick", "aria-label": "p." + pageNumberOf(page) + " に配置する記事" },
+      [el("option", { value: "", text: "配置する記事を選ぶ" })].concat(choices.map(function (a) {
+        return el("option", { value: a.id, text: displayTitleOf(a) + "（" + articleTemplate(a).label + "）" });
+      }), articleTemplates().map(function (t) {
+        return el("option", { value: "template:" + t.id, text: "新しい記事：" + t.label });
+      })));
+    var button = el("button", { type: "button", "class": "page-tools__add", text: "記事を配置", disabled: "disabled",
+      onclick: function () {
+        var value = pick.value;
+        if (value.indexOf("template:") === 0) { addArticleToPage(page, null, value.slice(9)); }
+        else if (value) { addArticleToPage(page, value); }
+      } });
+    pick.addEventListener("change", function () { button.disabled = !pick.value; });
+    return el("div", { "class": "page-assign" }, [pick, button]);
+  }
 
+  /* 未配置の記事だけを置く。既存原稿の入れ物を型の選択で置き換えない。 */
+  function addArticleToPage(page, articleId, templateId) {
+    if (!isEditor() || state.step !== "plan") { return; }
+    var body = $(".page__body", page);
+    if (!body || (articleId && articlePages(articleId).length)) { return; }
+    if (document.activeElement && document.activeElement.blur) { document.activeElement.blur(); }
     var firstNode = $("[data-article]", page);
     var hostFrame = firstNode ? frameOfArticle(firstNode.getAttribute("data-article")) : null;
-    var a;
-    if (articleId) {
-      a = articleById(articleId);
-    } else if (hostFrame) {
-      a = addArticleToFrame(hostFrame);
-    } else {
-      a = addArticle({ pages: 1 });
-    }
+    var a = articleId ? articleById(articleId) : addArticle({ template: templateId || "free",
+      title: articleTemplate({ template: templateId || "free" }).label + " " + (primaryArticles().length + 1) });
     if (!a) { return; }
 
-    var holder = el("div");
-    holder.innerHTML = rebaseMarkup(firstNode ? blockMarkup(a) : articleMarkup(a.id, true));
-    var block = holder.firstElementChild;
+    if (hostFrame && hostFrame.articles.indexOf(a.id) < 0) {
+      /* 配置先のページを分け合う。型は移さず、記事ごとに保持する。 */
+      var previousFrame = frameOfArticle(a.id);
+      var f = explicitFrame(hostFrame);
+      frames().forEach(function (old) {
+        if (old !== f) { old.articles = (old.articles || []).filter(function (id) { return id !== a.id; }); }
+      });
+      state.meta.plan.frames = frames().filter(function (old) { return old !== previousFrame || (old.articles || []).length; });
+      f.articles.push(a.id);
+      delete a.pages;
+      if (a.share === "rest") { a.share = 50; }
+      var first = articleById(firstNode.getAttribute("data-article"));
+      if (first && first.share === "rest") { first.share = 50; }
+    }
+    /* display: contents の記事も、同居するときは割合を持つ箱にする。 */
+    if (firstNode) {
+      $$('[data-article]', body).forEach(function (node) { node.classList.add("article--block", "article--flow"); });
+    }
+    var block = articleHolder(a, 0, !!firstNode);
     body.appendChild(block);
+    if (!firstNode) {
+      var tmpl = articleTemplate(a), attrs = (tmpl.pageAttrs || [])[a.continues ? 1 : 0] || {};
+      if (attrs.folio === "none") { page.setAttribute("data-folio", "none"); }
+      var runhead = $(".page__runhead", page);
+      if (runhead && !runhead.textContent.trim()) { runhead.textContent = attrs.runhead || ""; }
+    }
     afterPagesChanged();
-    block.scrollIntoView({ behavior: "smooth", block: "center" });
+    showBarToast("p." + pageNumberOf(page) + " に「" + displayTitleOf(a) + "」を配置しました");
   }
 
   /* 入れ物ごと外す。中の原稿も一緒に消えるので必ず確認を取る。
@@ -1465,24 +1506,25 @@
     });
 
     var onceCounts = {};
-    effectiveFrames().forEach(function (f) {
-      var t = frameTemplate(f);
-      if (f.template && !findTemplateRaw(f.template)) {
-        findings.push({ level: "error",
-          message: "「" + f.title + "」のページテンプレート「" + f.template + "」は存在しません（「自由」として扱っています。計画で選び直してください）" });
+    primaryArticles().forEach(function (a) {
+      var t = articleTemplate(a), pl = mergedPlacement(a.id, placement);
+      if (a.template && !findTemplateRaw(a.template)) {
+        findings.push({ level: "error", message: "「" + a.title + "」の記事テンプレート「" + a.template +
+          "」は存在しません（「自由」として扱っています。計画で選び直してください）" });
       }
       if (t.once) { onceCounts[t.id] = (onceCounts[t.id] || 0) + 1; }
-
+      if (t.fixed === "first" && pl && pl.first !== 1) {
+        findings.push({ level: "warn", message: "「" + a.title + "」は先頭に置く記事（" + t.label +
+          "）ですが、p.1 にありません（現在 " + placementLabel(pl) + "）" });
+      }
+    });
+    effectiveFrames().forEach(function (f) {
       var pl = null;
       (f.articles || []).forEach(function (id) {
         var p = placement[id];
         if (!p) { return; }
         pl = pl ? { first: Math.min(pl.first, p.first), last: Math.max(pl.last, p.last), pages: pl.pages.concat(p.pages) } : p;
       });
-      if (t.fixed === "first" && pl && pl.first !== 1) {
-        findings.push({ level: "warn",
-          message: "「" + f.title + "」は先頭固定のページテンプレート（" + t.label + "）ですが、p.1 にありません（現在 " + placementLabel(pl) + "）" });
-      }
       if (pl) {
         var used = pl.pages.filter(function (v, i, arr) { return arr.indexOf(v) === i; }).length;
         var plannedPages = framePlannedPages(f);
@@ -1498,22 +1540,21 @@
     Object.keys(onceCounts).forEach(function (id) {
       if (onceCounts[id] >= 2) {
         findings.push({ level: "error",
-          message: "「" + templateById(id).label + "」のページテンプレートが " + onceCounts[id] + " か所で使われています（1 号に 1 つだけの指定です）" });
+          message: "「" + templateById(id).label + "」の記事テンプレートが " + onceCounts[id] + " か所で使われています（1 号に 1 つだけの指定です）" });
       }
     });
 
     /* 末尾固定（奥付・裏表紙）は、複数あってよいが号の最後にまとまっていること */
     var lastPages = [];
-    effectiveFrames().forEach(function (f) {
-      if (frameTemplate(f).fixed !== "last") { return; }
-      (f.articles || []).forEach(function (id) {
-        (placement[id] ? placement[id].pages : []).forEach(function (p) { if (lastPages.indexOf(p) < 0) { lastPages.push(p); } });
-      });
+    primaryArticles().forEach(function (a) {
+      if (articleTemplate(a).fixed !== "last") { return; }
+      var pl = mergedPlacement(a.id, placement);
+      (pl ? pl.pages : []).forEach(function (p) { if (lastPages.indexOf(p) < 0) { lastPages.push(p); } });
     });
     if (lastPages.length) {
       lastPages.sort(function (x, y) { return x - y; });
       if (lastPages[0] !== total - lastPages.length + 1 || lastPages[lastPages.length - 1] !== total) {
-        findings.push({ level: "warn", message: "末尾固定のページテンプレート（奥付・裏表紙など）が号の末尾にまとまっていません" });
+        findings.push({ level: "warn", message: "末尾固定の記事テンプレート（奥付・裏表紙など）が号の末尾にまとまっていません" });
       }
     }
 
@@ -2137,7 +2178,7 @@
     var s1 = section("号の設定", false, [meta], "sec-meta");
     var s2 = section("枠・記事・担当", true, [plan], "sec-plan");
     if (!isEditor()) { makeReadOnly(s1); makeReadOnly(s2); }
-    var pageSection = section("ページの並び・削除", true, [buildPageOrder()], "sec-pages");
+    var pageSection = section("ページ・記事の配置", true, [buildPageOrder()], "sec-pages");
     if (!isEditor()) { makeReadOnly(pageSection); }
     content.appendChild(pageSection);
     content.appendChild(s1);
@@ -2228,11 +2269,11 @@
         text: "予定 " + planned + " ページ／紙面 " + actual + " ページ" }),
       el("button", { type: "button", "class": "panel-btn", text: "不足しているページを作る", onclick: syncPagesToPlan }),
       el("button", { type: "button", "class": "panel-btn", text: "＋ 頁",
-        title: "末尾にページを 1 枚足し、新しい記事として計画に登録する",
+        title: "末尾に白紙のページを 1 枚足す。記事はページ一覧から配置できます",
         disabled: actual >= MAX_PAGES ? "disabled" : null, onclick: addPage })
     ]));
     container.appendChild(el("p", { "class": "panel-note",
-      text: "総ページ数は枠の占有ページ数の合計です。1 ページに複数の記事を載せるときは、同じ枠に記事を足して割合を決めます。" }));
+      text: "記事ごとにテンプレートを選び、ページ一覧から配置します。枠はページ数と割合をまとめる単位です。同じページに別々の型の記事を置けます。" }));
 
     effectiveFrames().forEach(function (frame) {
       var fcard = el("div", { "class": "frame-card", "data-focus": focusAttrOfFrame(frame) });
@@ -2245,12 +2286,6 @@
           ? el("button", { type: "button", "class": "frame-card__del", text: "枠を外す", onclick: function () { deleteFrame(frame); } })
           : null
       ]));
-
-      fcard.appendChild(el("label", { text: "ページテンプレート" }, [el("select", {
-        onchange: function () { setFrameTemplate(frame, this.value); rerenderAll(); }
-      }, pageTemplates().map(function (t) {
-        return el("option", { value: t.id, selected: (frame.template || "free") === t.id ? "selected" : null, text: t.label });
-      }))]));
 
       fcard.appendChild(el("label", { text: "占有ページ数" }, [el("input", {
         type: "number", min: "0", max: String(MAX_PAGES), value: String(framePlannedPages(frame)),
@@ -2266,6 +2301,7 @@
           childCard.appendChild(el("div", { "class": "article-card__head" }, [
             el("span", { "class": "article-card__place", text: "↳ 続き（" + displayTitleOf(a).replace(/^続き（|）$/g, "") + "）" })
           ]));
+          childCard.appendChild(el("p", { "class": "panel-note", text: "記事テンプレートは親記事の「" + articleTemplate(a).label + "」を使います。" }));
           if ((frame.articles || []).length > 1) { childCard.appendChild(buildShareControl(a)); }
           fcard.appendChild(childCard);
           return;
@@ -2277,6 +2313,15 @@
           el("button", { type: "button", "class": "article-card__del", text: "外す", title: "この記事を計画から外す",
             onclick: function () { deleteArticle(a); } })
         ]));
+        card.appendChild(el("label", { text: "記事テンプレート" }, [el("select", {
+          "data-template-for": a.id, "aria-label": "「" + a.title + "」の記事テンプレート",
+          onchange: function () { setArticleTemplate(a, this.value); }
+        }, articleTemplates().map(function (t) {
+          return el("option", { value: t.id, selected: a.template === t.id ? "selected" : null, text: t.label });
+        }))]));
+        card.appendChild(el("p", { "class": "panel-note", text: articlePages(a.id).length
+          ? "配置済みの原稿は保持します。型の変更は、新しく配置する入れ物に反映されます。"
+          : "上のページ一覧でこの記事を選び、「記事を配置」を押してください。" }));
         card.appendChild(field("記事名", a.title, function (v) { a.title = v; syncMeta(); renderPlanSheetIfShown(); renderToc(); }));
         if ((frame.articles || []).length > 1) { card.appendChild(buildShareControl(a)); }
         card.appendChild(ownerSelect(a));
@@ -2835,7 +2880,7 @@
     list = list || $("#tpl-list");
     if (!list) { return; }
     list.innerHTML = "";
-    pageTemplates().forEach(function (t) {
+    articleTemplates().forEach(function (t) {
       list.appendChild(el("button", {
         type: "button", "class": "tpl-item", "aria-current": state.templateId === t.id ? "true" : "false",
         onclick: function () { state.templateId = t.id; renderSettings(); }
@@ -2848,9 +2893,9 @@
   }
 
   function buildTemplatesPane(body) {
-    if (!state.templateId || !findTemplateRaw(state.templateId)) { state.templateId = pageTemplates()[0].id; }
+    if (!state.templateId || !findTemplateRaw(state.templateId)) { state.templateId = articleTemplates()[0].id; }
     var t = findTemplateRaw(state.templateId);
-    var used = effectiveFrames().filter(function (f) { return frameTemplate(f).id === t.id; }).length;
+    var used = primaryArticles().filter(function (a) { return articleTemplate(a).id === t.id; }).length;
 
     var side = el("div", { "class": "tpl-side" }, [
       el("div", { id: "tpl-list", "class": "tpl-list" }),
@@ -2867,7 +2912,7 @@
     body.appendChild(side);
     body.appendChild(el("div", { "class": "settings-main" }, [
       el("h2", { text: t.label }),
-      el("p", { "class": "panel-note", text: "この号では " + used + " か所でこのテンプレートを使っています。" +
+      el("p", { "class": "panel-note", text: "この号では " + used + " 本の記事でこのテンプレートを使っています。" +
         "直した内容は、次に作る紙面から反映されます（書き終えた原稿は書き換えません）。" }),
       buildTemplateEditor(t)
     ]));
@@ -3077,6 +3122,9 @@
      "data-mine", "data-writable", "data-comments"].forEach(function (a) {
       $$("[" + a + "]", clone).forEach(function (n) { n.removeAttribute(a); });
     });
+
+    var metaNode = $("#kaiho-meta", clone);
+    if (metaNode) { metaNode.textContent = "\n" + JSON.stringify(state.meta, null, 2) + "\n"; }
 
     var body = $("body", clone);
     if (body) {

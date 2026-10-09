@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ページテンプレート見本帳</title>
+<title>記事テンプレート見本帳</title>
 <link rel="stylesheet" href="../system/tokens.css">
 <link rel="stylesheet" href="../brands/default/brand.css">
 <link rel="stylesheet" href="../system/print.css">
@@ -59,8 +59,8 @@
 <body>
 
 <!-- ========================================================================
-     この見本帳は「ページテンプレートの全リスト」です。
-     system/page-templates.js の window.KAIHO_PAGE_TEMPLATES から、このページを
+     この見本帳は「記事テンプレートの全リスト」です。
+     system/page-templates.js の window.KAIHO_ARTICLE_TEMPLATES から、このページを
      開くたびに実行時に組み立てています（静的に書き写すと定義と見本帳が
      食い違うため。CLAUDE.md の「見本帳に無い部品は存在しないのと同じ」）。
 
@@ -75,7 +75,7 @@
 
 <div class="tmpl-intro">
   <p class="t-lead">
-    編集計画の記事が選ぶ「ページテンプレート」の一覧です。
+    編集計画の記事が選ぶ「記事テンプレート」の一覧です。
     各テンプレートの見出し・諸元の直後に、実際に組み上がる紙面をそのまま並べています。
     ここに無いテンプレートは存在しません（system/page-templates.js を追加・変更したら
     必ずこの見本帳が最新のテンプレートを表示することを確認してください）。
@@ -169,11 +169,11 @@
 
   function render() {
     var root = $("#tmpl-root");
-    var templates = (window.KAIHO_PAGE_TEMPLATES || []);
+    var templates = (window.KAIHO_ARTICLE_TEMPLATES || window.KAIHO_PAGE_TEMPLATES || []);
 
     if (!templates.length) {
       root.appendChild(el("p", { "class": "tmpl-intro t-body", text:
-        "window.KAIHO_PAGE_TEMPLATES が空です。system/page-templates.js が正しく読み込まれているか確認してください。" }));
+        "window.KAIHO_ARTICLE_TEMPLATES が空です。system/page-templates.js が正しく読み込まれているか確認してください。" }));
       return;
     }
 
