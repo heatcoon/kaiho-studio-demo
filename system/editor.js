@@ -2537,7 +2537,7 @@
   function buildMetaForm(container) {
     container.appendChild(el("h2", { text: "号の情報" }));
     container.appendChild(issueNameField());
-    container.appendChild(issueEditionField());
+    container.appendChild(issueEditionInfo());
     container.appendChild(field("発行日", state.meta.date, function (v) { state.meta.date = v; syncMeta(); }, "date"));
 
     container.appendChild(el("h2", { text: "編集責任者" }));
@@ -2802,6 +2802,23 @@
     var errors = findings.filter(function (f) { return f.level === "error"; }).length;
     var sc = signoffCount();
     var remaining = VISUAL_CHECKLIST.filter(function (_, i) { return !state.checklist["v" + i]; }).length;
+
+    var canRevise = state.meta.released || (sc.total > 0 && sc.done === sc.total);
+    content.appendChild(section("再印刷・訂正", true, [
+      issueEditionInfo(),
+      el("p", { "class": "panel-note", text: canRevise
+        ? "内容を引き継いで次の版の制作を始めます。未発行に戻り、原稿作成で訂正できます。"
+        : "校了または発行済みになった後、訂正して再印刷する場合に次の版へ進めます。" }),
+      el("button", { type: "button", "class": "panel-btn", text: "次の版にする", disabled: !isEditor() || !canRevise ? "disabled" : null,
+        onclick: function () {
+          var count = signoffCount();
+          if (!isEditor() || !(state.meta.released || (count.total > 0 && count.done === count.total))) { return; }
+          setEdition(state.meta.edition + 1);
+          state.checklist = {};
+          setStep("write");
+          showBarToast(editionLabel() + "の制作を始めました。訂正後に校正・入稿を確認してください");
+        } })
+    ], "sec-reprint"));
 
     if (!isEditor()) {
       content.appendChild(lockNote("入稿は編集長の作業です。入稿データを見ること・印刷することはできます。"));
@@ -3230,18 +3247,14 @@
     state.meta.edition = value;
     /* 発行済みなのは前の版。新しい版は改めて入稿・発行を確認する。 */
     state.meta.released = false;
-    $$("[data-edition-input]").forEach(function (input) { input.value = String(value); });
     $$("[data-edition-label]").forEach(function (label) { label.textContent = editionLabel(); });
     renderEdition(); syncMeta(); updateStatusBits();
   }
 
-  function issueEditionField() {
-    var input = el("input", { type: "number", min: "1", max: String(Number.MAX_SAFE_INTEGER), step: "1", required: "required", value: state.meta.edition,
-      "data-edition-input": "true", oninput: function () { if (this.validity.valid) { setEdition(this.valueAsNumber); } } });
-    return el("div", { "class": "issue-edition" }, [
-      el("label", { text: "版数" }, [input]),
-      el("span", { "data-edition-label": "true", "aria-live": "polite", text: editionLabel() }),
-      el("button", { type: "button", "class": "panel-btn", text: "次の版にする", onclick: function () { setEdition(state.meta.edition + 1); } })
+  function issueEditionInfo() {
+    return el("p", { "class": "issue-edition" }, [
+      el("span", { text: "現在の版：" }),
+      el("strong", { "data-edition-label": "true", text: editionLabel() })
     ]);
   }
 
@@ -3282,7 +3295,7 @@
     ]);
     var identity = el("section", { "class": "settings-identity", "aria-label": "会報の基本情報" }, [
       issueNameField(),
-      issueEditionField(),
+      issueEditionInfo(),
       el("p", { id: "kaiho-issue-name-help", "class": "panel-note", text: "会報名や号、用途などを自由に入力できます。例：〇〇会報 2026年5月号／2026年夏号" })
     ]);
     $("input", identity).setAttribute("aria-describedby", "kaiho-issue-name-help");
@@ -3534,8 +3547,6 @@
   }
 
   function save() {
-    var invalidEdition = $$('[data-edition-input]').find(function (input) { return !input.disabled && input.getClientRects().length && !input.validity.valid; });
-    if (invalidEdition) { invalidEdition.reportValidity(); return; }
     if (!anyDirty()) { showBarToast("保存する変更はありません"); return; }
     syncMeta(); renderEdition();
     var jobs = [];
