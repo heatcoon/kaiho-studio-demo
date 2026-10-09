@@ -757,7 +757,7 @@
   body[data-settings="open"] > .plan-sheet,
   body[data-settings="open"] .editor-panel,
   body[data-settings="open"] .view-dock { display: none !important; }
-  body[data-settings="open"] .step-bar { opacity: 0.35; }
+  body[data-settings="open"] #kaiho-steps { display: none; }
 
   .settings-view {
     position: fixed; top: var(--bar-h, 44px); left: 0; right: 0; bottom: 0; z-index: 80;
