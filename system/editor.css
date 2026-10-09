@@ -771,6 +771,12 @@
   }
   .settings-head h1 { margin: 0; font-size: 18px; color: #fff; }
   .settings-head .exit-btn { flex: none; }
+  .settings-identity { flex: none; padding: 12px 20px; border-bottom: 1px solid #454a52; }
+  .settings-identity label { display: flex; flex-direction: column; gap: 6px; max-width: 720px; font-weight: 600; }
+  .settings-identity input { box-sizing: border-box; width: 100%; min-width: 0; min-height: 44px; padding: 8px 12px; border: 1px solid #56616e; border-radius: 6px; background: #1c222a; color: #e8eaed; font: inherit; }
+  .settings-identity .panel-note { margin: 8px 0 0; }
+  .settings-tabs { flex: none; flex-wrap: wrap; padding: 12px 20px; border-bottom: 1px solid #454a52; }
+  .settings-tabs button { white-space: normal; }
   .settings-body { flex: 1; display: flex; min-height: 0; }
   .settings-body > .panel-lock { position: absolute; right: 20px; top: 70px; z-index: 2; }
 
@@ -1078,6 +1084,7 @@
     #kaiho-spread { display: none; }
     .editor-bar__toast { bottom: calc(142px + env(safe-area-inset-bottom)); }
     .settings-head { padding: 12px; gap: 8px; flex-wrap: wrap; }
+    .settings-identity, .settings-tabs { padding: 12px; }
     .settings-head .panel-note { width: 100%; margin: 0; }
     .settings-view { bottom: calc(68px + env(safe-area-inset-bottom)); }
     body[data-settings="open"] .mobile-nav { display: none; }

@@ -2530,7 +2530,7 @@
   /* 判型・締切。号にひとつの値（決定 1-a・決定 2） */
   function buildMetaForm(container) {
     container.appendChild(el("h2", { text: "号の情報" }));
-    container.appendChild(field("号数・タイトル", state.meta.issue, function (v) { state.meta.issue = v; syncMeta(); }));
+    container.appendChild(issueNameField());
     container.appendChild(field("発行日", state.meta.date, function (v) { state.meta.date = v; syncMeta(); }, "date"));
 
     container.appendChild(el("h2", { text: "編集責任者" }));
@@ -3199,6 +3199,21 @@
     body.appendChild(main);
   }
 
+  /* 名前は開いている号の情報。共通の設定に保存すると別の号も同じ名前になるため。 */
+  function issueNameField() {
+    var control = field("会報・号の名前", state.meta.issue, function (value) {
+      state.meta.issue = value;
+      $$("[data-issue-name]").forEach(function (input) {
+        if (input.value !== value) { input.value = value; }
+      });
+      syncMeta(); updateStatusBits();
+    });
+    var input = $("input", control);
+    input.setAttribute("data-issue-name", "true");
+    input.setAttribute("placeholder", "例：〇〇会報 2026年夏号");
+    return control;
+  }
+
   function renderSettings() {
     var old = $(".settings-view");
     if (old) { old.remove(); }
@@ -3206,17 +3221,24 @@
     var view = el("div", { "class": "settings-view" }, [
       el("div", { "class": "settings-head" }, [
         el("h1", { text: "設定" }),
-        el("span", { "class": "panel-note", text: "この会報のひな型と、一緒に作業する人を管理します。" }),
-        el("div", { "class": "seg" }, tabs.map(function (t) {
-          return el("button", { type: "button", text: t.label, "aria-pressed": state.settingsTab === t.id ? "true" : "false",
-            onclick: function () { state.settingsTab = t.id; state.templateId = null; renderSettings(); } });
-        })),
+        el("span", { "class": "panel-note", text: "名前・テンプレート・名簿を管理します。" }),
         el("span", { "class": "editor-bar__spacer" }),
         el("span", { "class": "editor-bar__status kaiho-savestate", "data-dirty": "false" }),
         el("button", { type: "button", "class": "exit-btn exit-btn--secondary", text: "保存", onclick: save }),
         el("button", { type: "button", "class": "exit-btn", text: "号に戻る", onclick: closeSettings })
       ])
     ]);
+    var identity = el("section", { "class": "settings-identity", "aria-label": "会報の基本情報" }, [
+      issueNameField(),
+      el("p", { id: "kaiho-issue-name-help", "class": "panel-note", text: "会報名や号、用途などを自由に入力できます。例：〇〇会報 2026年5月号／2026年夏号" })
+    ]);
+    $("input", identity).setAttribute("aria-describedby", "kaiho-issue-name-help");
+    if (!isEditor()) { makeReadOnly(identity); }
+    view.appendChild(identity);
+    view.appendChild(el("div", { "class": "settings-tabs seg", "aria-label": "設定の種類" }, tabs.map(function (t) {
+      return el("button", { type: "button", text: t.label, "aria-pressed": state.settingsTab === t.id ? "true" : "false",
+        onclick: function () { state.settingsTab = t.id; state.templateId = null; renderSettings(); } });
+    })));
     var body = el("div", { "class": "settings-body" });
     if (state.settingsTab === "members") { buildMembersPane(body); } else { buildTemplatesPane(body); }
     if (!isEditor() && state.settingsTab !== "members") {
