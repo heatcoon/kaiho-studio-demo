@@ -2916,14 +2916,16 @@
 
   function openSettings(tab) {
     if (tab) { state.settingsTab = tab; }
+    state.settingsReturnFocus = document.activeElement;
     document.body.setAttribute("data-settings", "open");
     renderSettings();
   }
   function closeSettings() {
     document.body.removeAttribute("data-settings");
     var v = $(".settings-view");
-    if (v) { v.remove(); }
+    if (v) { v.close(); v.remove(); }
     rerenderAll();
+    if (state.settingsReturnFocus && state.settingsReturnFocus.isConnected) { state.settingsReturnFocus.focus({ preventScroll: true }); }
   }
 
   function settingsEntry(id, kind) {
@@ -3219,20 +3221,21 @@
 
   function renderSettings() {
     var old = $(".settings-view");
-    if (old) { old.remove(); }
+    var scrollTop = old && old.getAttribute("data-tab") === state.settingsTab ? $(".settings-scroll", old).scrollTop : 0;
+    if (old) { old.close(); old.remove(); }
     var tabs = [
       { id: "sectionTemplates", label: "セクションテンプレート", title: "セクション", suffix: "テンプレート", description: "記事をまとめる型" },
       { id: "articleTemplates", label: "記事テンプレート", title: "記事", suffix: "テンプレート", description: "1本の記事の型" },
       { id: "members", label: "名簿", title: "名簿", suffix: "", description: "人・役割・連絡先" }
     ];
-    var view = el("div", { "class": "settings-view" }, [
+    var view = el("dialog", { "class": "settings-view", "aria-labelledby": "kaiho-settings-title", "data-tab": state.settingsTab, tabindex: "-1" }, [
       el("div", { "class": "settings-head" }, [
-        el("h1", { text: "設定" }),
+        el("h1", { id: "kaiho-settings-title", text: "設定" }),
         el("span", { "class": "panel-note", text: "名前・テンプレート・名簿を管理します。" }),
         el("span", { "class": "editor-bar__spacer" }),
         el("span", { "class": "editor-bar__status kaiho-savestate", "data-dirty": "false" }),
         el("button", { type: "button", "class": "exit-btn exit-btn--secondary", text: "保存", onclick: save }),
-        el("button", { type: "button", "class": "exit-btn", text: "号に戻る", onclick: closeSettings })
+        el("button", { type: "button", "class": "exit-btn settings-close", text: "閉じる", onclick: closeSettings })
       ])
     ]);
     var identity = el("section", { "class": "settings-identity", "aria-label": "会報の基本情報" }, [
@@ -3241,8 +3244,9 @@
     ]);
     $("input", identity).setAttribute("aria-describedby", "kaiho-issue-name-help");
     if (!isEditor()) { makeReadOnly(identity); }
-    view.appendChild(identity);
-    view.appendChild(el("nav", { "class": "settings-navigation", "aria-label": "設定項目の切り替え" }, [
+    var scroll = el("div", { "class": "settings-scroll" });
+    scroll.appendChild(identity);
+    scroll.appendChild(el("nav", { "class": "settings-navigation", "aria-label": "設定項目の切り替え" }, [
       el("p", { "class": "settings-navigation__label", text: "設定する項目を選ぶ" }),
       el("div", { "class": "settings-tabs" }, tabs.map(function (t) {
         var selected = state.settingsTab === t.id;
@@ -3264,8 +3268,23 @@
     if (!isEditor() && state.settingsTab !== "members") {
       body.insertBefore(lockNote("設定は編集長だけが変更できます。"), body.firstChild);
     }
-    view.appendChild(body);
+    scroll.appendChild(body);
+    view.appendChild(scroll);
+    view.addEventListener("cancel", function (event) { event.preventDefault(); closeSettings(); });
+    view.addEventListener("keydown", function (event) {
+      if (event.key !== "Tab") { return; }
+      var controls = $$('button, input, select, textarea, a[href], [contenteditable="true"], [tabindex]', view).filter(function (node) {
+        return !node.disabled && (node.tabIndex >= 0 || node.isContentEditable) && node.getClientRects().length;
+      });
+      var first = controls[0], last = controls[controls.length - 1];
+      if (first && ((event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last))) {
+        event.preventDefault(); (event.shiftKey ? last : first).focus();
+      }
+    });
     document.body.appendChild(view);
+    view.showModal();
+    scroll.scrollTop = scrollTop;
+    view.focus({ preventScroll: true });
     renderSaveState();
   }
 
