@@ -1003,7 +1003,8 @@
   .editor-bar .step-bar__step { min-height: 52px; justify-content: flex-start; border-radius: 10px; padding: 8px 12px; }
   .step-bar__sub { margin-left: auto; }
   .editor-bar .step-bar__step[aria-current="step"] { background: #224e78; border-color: #8cbdf0; box-shadow: inset 0 -3px #8cbdf0; }
-  .editor-bar .save-primary { margin-left: auto; background: #3268a3; border-color: #83b4e6; font-weight: 700; padding: 10px 24px; }
+  .issue-actions { flex: none; display: flex; justify-content: flex-end; padding: 12px 16px; border-bottom: 1px solid #454a52; }
+  .issue-actions .save-primary { min-height: 44px; padding: 10px 24px; border: 1px solid #83b4e6; border-radius: 8px; background: #3268a3; color: #fff; font: 700 14px/1.4 system-ui, sans-serif; cursor: pointer; }
   .editor-bar__status, .panel-note, .step-bar__sub, .work-card__meta, .panel-head__who { color: #bcc8d6; }
   .editor-bar__toast { position: fixed; left: 50%; bottom: 88px; transform: translateX(-50%); max-width: calc(100vw - 32px); box-sizing: border-box; padding: 12px 18px; border-radius: 10px; background: #182330; color: #fff; white-space: normal; pointer-events: none; box-shadow: 0 4px 20px #0003; }
   .editor-bar__toast:not([data-show="true"]) { visibility: hidden; }
@@ -1058,7 +1059,8 @@
     .editor-bar { padding: 10px 12px; gap: 6px; }
     .editor-bar__title { font-size: 14px; }
     .editor-bar__issue { max-width: 140px; font-size: 12px; }
-    .editor-bar .save-primary { padding: 8px 16px; }
+    .mobile-nav .issue-actions { padding: 0; border: 0; }
+    .mobile-nav .issue-actions .save-primary { min-height: 48px; padding: 8px 16px; background: #3268a3; border-color: #83b4e6; }
     .editor-bar__status { font-size: 11px; }
     #kaiho-user { display: inline-flex; order: 5; max-width: calc(100% - 90px); overflow: hidden; }
     #kaiho-user > span:first-child { overflow: hidden; text-overflow: ellipsis; }

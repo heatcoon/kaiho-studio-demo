@@ -2209,6 +2209,9 @@
   function buildPanel() {
     var panel = el("aside", { id: "kaiho-panel", "class": "editor-panel", "data-open": "true", "aria-label": "作業内容" });
     panel.appendChild(buildResizer());
+    panel.appendChild(el("div", { "class": "issue-actions", "aria-label": "号の保存" }, [
+      el("button", { type: "button", "class": "save-primary", text: "保存", title: "変更を保存（Ctrl+S）", onclick: save })
+    ]));
     panel.appendChild(el("div", { "class": "editor-panel__content", id: "kaiho-panel-content" }));
     panel.appendChild(el("div", { "class": "editor-panel__exit", id: "kaiho-panel-exit" }));
     document.body.appendChild(panel);
@@ -2282,7 +2285,7 @@
     ], "sec-checks"));
     if (role() !== "viewer") {
       content.appendChild(el("p", { "class": "panel-note save-help", text: window.showDirectoryPicker ?
-        "変更は自動保存されません。上の「保存」を押してください。初回は作業フォルダを選びます。" :
+        "変更は自動保存されません。この画面の「保存」を押してください。初回は作業フォルダを選びます。" :
         "変更は自動保存されません。「保存」でファイルをダウンロードし、元のファイルと置き換えてください。" }));
     }
 
@@ -3328,7 +3331,7 @@
     /* 読み込み時に生成したものはすべて捨てる */
     $$(".editor-bar, .editor-panel, .view-dock, .settings-view, .login-view, .page__guides, .page-tools, " +
        ".production-slug, .plan-sheet, .focus-veil, .share-handle, .continuation-controls, " +
-       ".mobile-nav, script[data-kaiho-injected]", clone).forEach(function (n) { n.remove(); });
+       ".mobile-nav, .issue-actions, script[data-kaiho-injected]", clone).forEach(function (n) { n.remove(); });
 
     ["contenteditable", "data-overflow", "data-overflow-label", "data-side", "data-focus",
      "data-mine", "data-writable", "data-comments"].forEach(function (a) {
@@ -3554,7 +3557,6 @@
           if (d) { d.open = true; d.scrollIntoView({ behavior: "smooth", block: "start" }); }
         } }),
       el("span", { "class": "editor-bar__status kaiho-savestate", role: "status", "aria-live": "polite", "data-dirty": "false", text: "保存済み" }),
-      el("button", { type: "button", "class": "save-primary", text: "保存", title: "変更を保存（Ctrl+S）", onclick: save }),
       el("span", { id: "kaiho-toast", role: "status", "aria-live": "polite", "class": "editor-bar__toast", "data-show": "false" }),
       el("span", { "class": "editor-bar__sep" }),
       el("span", { id: "kaiho-user", "class": "user-chip" }),
@@ -3611,10 +3613,15 @@
 
   function setMobileSurface(surface) {
     document.body.setAttribute("data-surface", surface);
-    $$(".mobile-nav button").forEach(function (b) {
+    $$(".mobile-nav [data-surface-target]").forEach(function (b) {
       b.setAttribute("aria-pressed", b.getAttribute("data-surface-target") === surface ? "true" : "false");
     });
-    var panel = $(".editor-panel");
+    var panel = $(".editor-panel"), actions = $(".issue-actions"), nav = $(".mobile-nav");
+    /* 紙面表示ではパネルが閉じるため、スマホの保存は常に下の操作列に置く。 */
+    if (actions && panel && nav) {
+      if (isCompact() && actions.parentNode !== nav) { nav.appendChild(actions); }
+      else if (!isCompact() && actions.parentNode !== panel) { panel.insertBefore(actions, $("#kaiho-panel-content", panel)); }
+    }
     if (panel) { panel.inert = isCompact() && surface === "paper"; }
     updateFitZoom();
   }
