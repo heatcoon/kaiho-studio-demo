@@ -170,7 +170,7 @@
        ------------------------------------------------------------------ */
     {
       id: "report",
-      label: "活動報告",
+      label: "報告記事",
       pages: 1,
       once: false,
       fixed: null,
@@ -180,7 +180,7 @@
       ],
       markup: function (id) {
         return '<article class="article" data-article="' + id + '">\n' +
-          '  <h2 class="t-h1" data-editable>活動報告</h2>\n' +
+          '  <h3 class="t-h2" data-editable>報告の見出し</h3>\n' +
           '  <div class="grid mb-8" style="grid-template-columns: repeat(2, 1fr);">\n' +
           '    <figure class="fig--4x3">\n' +
           '      <img src="../system/placeholder.svg" alt="活動の様子を説明する代替テキスト">\n' +
@@ -361,6 +361,16 @@
       }
     }
 
+  ];
+
+  /* セクションは共通見出しと記事の並べ方だけを持つ。記事はスロットへ別々に配置する。 */
+  window.KAIHO_SECTION_TEMPLATES = [
+    { id: "standard", label: "標準セクション", layout: "stack", heading: true,
+      markup: function (id) { return '<section class="content-section" data-section="' + id + '"><h2 class="t-h2 content-section__title" data-section-title data-editable>セクション見出し</h2><div class="content-section__articles" data-section-articles></div></section>'; } },
+    { id: "report", label: "活動報告", layout: "stack", heading: true,
+      markup: function (id) { return '<section class="content-section" data-section="' + id + '"><h2 class="t-band content-section__title" data-section-title data-editable>活動報告</h2><div class="content-section__articles" data-section-articles></div></section>'; } },
+    { id: "columns", label: "記事を横に並べる", layout: "columns", heading: true,
+      markup: function (id) { return '<section class="content-section" data-section="' + id + '"><h2 class="t-h2 content-section__title" data-section-title data-editable>セクション見出し</h2><div class="content-section__articles" data-section-articles></div></section>'; } }
   ];
 
   /* 既存の号・見本帳からの参照を保つ互換名。 */

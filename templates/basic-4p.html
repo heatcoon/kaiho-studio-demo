@@ -1,6 +1,5 @@
 <!doctype html>
-<html lang="ja" data-format="A4">
-<head>
+<html lang="ja" data-format="A4"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>会報テンプレート（4ページ）</title>
@@ -12,8 +11,8 @@
 <!-- page-templates.js は editor.js より前に読むこと。
      editor.js が window.KAIHO_PAGE_TEMPLATES を参照する前提のため、
      順序が逆になると（page-templates.js 未定義のまま editor.js が動くと）壊れる。 -->
-<script src="../system/page-templates.js" defer></script>
-<script src="../system/editor.js" defer></script>
+<script src="../system/page-templates.js" defer=""></script>
+<script src="../system/editor.js" defer=""></script>
 </head>
 
 <!--
@@ -27,29 +26,29 @@
 <!-- p1 表紙 -->
 <section class="page" data-folio="none">
   <div class="page__body">
-    <article class="article" data-article="cover">
+    <section class="content-section content-section--legacy" data-section="s-cover"><div class="content-section__articles" data-section-articles=""><article class="article" data-article="cover">
       <header class="masthead">
         <!-- ロゴのパスは、上の <link> と同じ brands/ フォルダを指す。
              号を issues/ 以下に置いたら ../../brands/... に直すこと。 -->
         <img class="masthead__logo" src="../brands/default/logo.svg" alt="団体名">
-        <h1 class="masthead__title" data-editable>会報タイトル</h1>
-        <p class="masthead__meta t-num" data-editable>第00号　2026年1月発行</p>
+        <h1 class="masthead__title" data-editable="">会報タイトル</h1>
+        <p class="masthead__meta t-num" data-editable="">第00号　2026年1月発行</p>
       </header>
 
       <figure class="fig--16x9 mb-8">
         <img src="../system/placeholder.svg" alt="表紙写真の内容を説明する代替テキスト">
-        <figcaption data-editable>表紙写真のキャプション</figcaption>
+        <figcaption data-editable="">表紙写真のキャプション</figcaption>
       </figure>
 
-      <p class="t-lead fill" data-editable>
+      <p class="t-lead fill" data-editable="">
         表紙リード。この号の中心となる話題を 2〜3 行で。
       </p>
 
       <nav aria-label="目次">
         <h2 class="t-h3">もくじ</h2>
-        <ul class="toc" data-toc="auto"></ul>
+        <ul class="toc" data-toc="auto"><li class="toc__item"><span class="toc__title">記事1</span><span class="toc__page t-num">2</span></li><li class="toc__item"><span class="toc__title">記事2</span><span class="toc__page t-num">3</span></li><li class="toc__item"><span class="toc__title">お知らせ・奥付</span><span class="toc__page t-num">4</span></li></ul>
       </nav>
-    </article>
+    </article></div></section>
   </div>
   <span class="page__folio"></span>
 </section>
@@ -57,61 +56,61 @@
 <!-- p2 記事 -->
 <section class="page">
   <div class="page__body">
-    <article class="article" data-article="article-1">
-      <h2 class="t-h1" data-editable>記事タイトル</h2>
-      <p class="t-lead" data-editable>リード文。</p>
-      <div class="cols-2 cols-rule fill" data-editable>
+    <section class="content-section content-section--legacy" data-section="s-article-1"><div class="content-section__articles" data-section-articles=""><article class="article" data-article="article-1">
+      <h2 class="t-h1" data-editable="">記事タイトル</h2>
+      <p class="t-lead" data-editable="">リード文。</p>
+      <div class="cols-2 cols-rule fill" data-editable="">
         <p>本文が入ります。</p>
       </div>
-    </article>
+    </article></div></section>
   </div>
-  <span class="page__runhead" data-editable>柱</span>
+  <span class="page__runhead" data-editable="">柱</span>
   <span class="page__folio"></span>
 </section>
 
 <!-- p3 記事 -->
 <section class="page">
   <div class="page__body">
-    <article class="article" data-article="article-2">
-      <h2 class="t-h1" data-editable>記事タイトル</h2>
+    <section class="content-section content-section--legacy" data-section="s-article-2"><div class="content-section__articles" data-section-articles=""><article class="article" data-article="article-2">
+      <h2 class="t-h1" data-editable="">記事タイトル</h2>
       <figure class="fig--16x9">
         <img src="../system/placeholder.svg" alt="図版の内容を説明する代替テキスト">
-        <figcaption data-editable>図版のキャプション</figcaption>
+        <figcaption data-editable="">図版のキャプション</figcaption>
       </figure>
-      <div class="cols-2 fill" data-editable>
+      <div class="cols-2 fill" data-editable="">
         <p>本文が入ります。</p>
       </div>
-    </article>
+    </article></div></section>
   </div>
-  <span class="page__runhead" data-editable>柱</span>
+  <span class="page__runhead" data-editable="">柱</span>
   <span class="page__folio"></span>
 </section>
 
 <!-- p4 お知らせ・奥付 -->
 <section class="page">
   <div class="page__body">
-    <article class="article" data-article="notice">
-      <h2 class="t-h1" data-editable>お知らせ</h2>
+    <section class="content-section content-section--legacy" data-section="s-notice"><div class="content-section__articles" data-section-articles=""><article class="article" data-article="notice">
+      <h2 class="t-h1" data-editable="">お知らせ</h2>
 
-      <div class="box box--brand" data-editable>
+      <div class="box box--brand" data-editable="">
         <h3 class="box__title">重要なお知らせ</h3>
         <p>会員に必ず届けたい内容。</p>
       </div>
 
-      <h2 class="t-h2" data-editable>行事予定</h2>
-      <dl class="deflist" data-editable>
+      <h2 class="t-h2" data-editable="">行事予定</h2>
+      <dl class="deflist" data-editable="">
         <div class="deflist__row"><dt class="deflist__key t-num">0/00</dt><dd>行事名（会場・時間）</dd></div>
         <div class="deflist__row"><dt class="deflist__key t-num">0/00</dt><dd>行事名（会場・時間）</dd></div>
       </dl>
 
-      <footer class="colophon" data-editable>
+      <footer class="colophon" data-editable="">
         <p><strong>会報タイトル　第00号</strong>　2026年1月発行</p>
         <p>発行：団体名　／　編集：広報委員会</p>
         <p>〒000-0000　住所<br>電話 000-000-0000　／　mail@example.org</p>
       </footer>
-    </article>
+    </article></div></section>
   </div>
-  <span class="page__runhead" data-editable>お知らせ</span>
+  <span class="page__runhead" data-editable="">お知らせ</span>
   <span class="page__folio"></span>
 </section>
 
@@ -131,6 +130,7 @@
     "proof2": "",
     "final": ""
   },
+  "released": false,
   "editor": {
     "name": "編集長：氏名",
     "contact": "mail@example.org"
@@ -141,46 +141,85 @@
         "id": "cover",
         "title": "表紙・もくじ",
         "template": "cover",
-        "pages": 1,
         "owner": "",
         "contact": "",
         "current": "manuscript",
-        "schedule": {}
+        "schedule": {},
+        "share": "rest"
       },
       {
         "id": "article-1",
         "title": "記事1",
         "template": "free",
-        "pages": 1,
         "owner": "",
         "contact": "",
         "current": "manuscript",
-        "schedule": {}
+        "schedule": {},
+        "share": "rest"
       },
       {
         "id": "article-2",
         "title": "記事2",
         "template": "free",
-        "pages": 1,
         "owner": "",
         "contact": "",
         "current": "manuscript",
-        "schedule": {}
+        "schedule": {},
+        "share": "rest"
       },
       {
         "id": "notice",
         "title": "お知らせ・奥付",
         "template": "notice",
-        "pages": 1,
         "owner": "",
         "contact": "",
         "current": "manuscript",
-        "schedule": {}
+        "schedule": {},
+        "share": "rest"
+      }
+    ],
+    "sections": [
+      {
+        "id": "s-cover",
+        "title": "表紙・もくじ",
+        "template": "standard",
+        "pages": 1,
+        "articles": [
+          "cover"
+        ]
+      },
+      {
+        "id": "s-article-1",
+        "title": "記事1",
+        "template": "standard",
+        "pages": 1,
+        "articles": [
+          "article-1"
+        ]
+      },
+      {
+        "id": "s-article-2",
+        "title": "記事2",
+        "template": "standard",
+        "pages": 1,
+        "articles": [
+          "article-2"
+        ]
+      },
+      {
+        "id": "s-notice",
+        "title": "お知らせ・奥付",
+        "template": "standard",
+        "pages": 1,
+        "articles": [
+          "notice"
+        ]
       }
     ]
   }
 }
 </script>
 
-</body>
-</html>
+
+
+</body></html>

@@ -1,6 +1,5 @@
 <!doctype html>
-<html lang="ja" data-format="A4">
-<head>
+<html lang="ja" data-format="A4"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>コンポーネント見本帳</title>
@@ -12,8 +11,8 @@
 <!-- page-templates.js は editor.js より前に読むこと。
      editor.js が window.KAIHO_PAGE_TEMPLATES を参照する前提のため、
      順序が逆になると（page-templates.js 未定義のまま editor.js が動くと）壊れる。 -->
-<script src="../system/page-templates.js" defer></script>
-<script src="../system/editor.js" defer></script>
+<script src="../system/page-templates.js" defer=""></script>
+<script src="../system/editor.js" defer=""></script>
 <style>
   /* 見本帳だけで使う注記。実際の号ではこの style ブロックごと不要です。 */
   .spec {
@@ -38,7 +37,7 @@
 <!-- p1 タイポグラフィ -->
 <section class="page" data-folio="none">
   <div class="page__body">
-    <article class="article" data-article="g1">
+    <section class="content-section content-section--legacy" data-section="s-g1"><div class="content-section__articles" data-section-articles=""><article class="article" data-article="g1">
       <span class="t-band">コンポーネント見本帳</span>
       <p class="t-lead">会報スタジオで使用できる部品の一覧です。赤字は指定するクラス名。</p>
 
@@ -58,7 +57,7 @@
 
       <span class="t-band">帯見出し</span>
       <span class="spec">t-band（白抜き。1ページに1つまで）</span>
-    </article>
+    </article></div></section>
   </div>
   <span class="page__folio"></span>
 </section>
@@ -67,7 +66,7 @@
 <!-- p2 本文 -->
 <section class="page">
   <div class="page__body">
-    <article class="article" data-article="g2">
+    <section class="content-section content-section--legacy" data-section="s-g2"><div class="content-section__articles" data-section-articles=""><article class="article" data-article="g2">
       <h2 class="t-h2 mt-0">2. 本文</h2>
 
       <p class="t-lead">リード文。記事の入口として本文より一段大きく組みます。</p>
@@ -90,7 +89,7 @@
         <span class="byline__name">署名</span>
       </p>
       <span class="spec">byline / byline__role / byline__name</span>
-    </article>
+    </article></div></section>
   </div>
   <span class="page__runhead">見本帳</span>
   <span class="page__folio"></span>
@@ -100,7 +99,7 @@
 <!-- p3 図版 -->
 <section class="page">
   <div class="page__body">
-    <article class="article" data-article="g3">
+    <section class="content-section content-section--legacy" data-section="s-g3"><div class="content-section__articles" data-section-articles=""><article class="article" data-article="g3">
       <h2 class="t-h2 mt-0">3. 図版</h2>
 
       <div class="grid mb-4" style="grid-template-columns: repeat(3, 1fr);">
@@ -128,7 +127,7 @@
         <figcaption>顔写真</figcaption>
       </figure>
       <span class="spec">portrait</span>
-    </article>
+    </article></div></section>
   </div>
   <span class="page__runhead">見本帳</span>
   <span class="page__folio"></span>
@@ -138,7 +137,7 @@
 <!-- p4 囲み・引用 -->
 <section class="page">
   <div class="page__body">
-    <article class="article" data-article="g4">
+    <section class="content-section content-section--legacy" data-section="s-g4"><div class="content-section__articles" data-section-articles=""><article class="article" data-article="g4">
       <h2 class="t-h2 mt-0">4. 囲み・引用</h2>
 
       <div class="box">
@@ -164,7 +163,7 @@
         注意事項。差し色を使うので 1 ページに 1 つまで。
       </aside>
       <span class="spec">callout / callout__label</span>
-    </article>
+    </article></div></section>
   </div>
   <span class="page__runhead">見本帳</span>
   <span class="page__folio"></span>
@@ -174,7 +173,7 @@
 <!-- p5 リスト・表・段組 -->
 <section class="page">
   <div class="page__body">
-    <article class="article" data-article="g5">
+    <section class="content-section content-section--legacy" data-section="s-g5"><div class="content-section__articles" data-section-articles=""><article class="article" data-article="g5">
       <h2 class="t-h2 mt-0">5. リスト・表</h2>
 
       <dl class="deflist">
@@ -211,7 +210,7 @@
         <p>発行：団体名</p>
       </footer>
       <span class="spec">colophon（通常はページ下端に自動で寄ります）</span>
-    </article>
+    </article></div></section>
   </div>
   <span class="page__runhead">見本帳</span>
   <span class="page__folio"></span>
@@ -221,7 +220,7 @@
 <!-- p6 使い方の約束 -->
 <section class="page">
   <div class="page__body">
-    <article class="article" data-article="g6">
+    <section class="content-section content-section--legacy" data-section="s-g6"><div class="content-section__articles" data-section-articles=""><article class="article" data-article="g6">
       <span class="t-band">使い方の約束</span>
 
       <h2 class="t-h2 mt-0">紙面に直接 style を書かない</h2>
@@ -270,7 +269,7 @@
           各ガイドがあります。まず docs/README.md を見てください。
         </p>
       </div>
-    </article>
+    </article></div></section>
   </div>
   <span class="page__runhead">見本帳</span>
   <span class="page__folio"></span>
@@ -279,7 +278,7 @@
 <!-- p7 1 ページに複数の記事（枠と割合、docs/00 決定 11・12） -->
 <section class="page">
   <div class="page__body">
-    <article class="article article--block" data-article="g7a" style="--share: 40%">
+    <section class="content-section content-section--legacy" data-section="f-g7"><div class="content-section__articles" data-section-articles=""><article class="article article--block" data-article="g7a" style="--share: 40%">
       <span class="t-band">8. 1 ページに複数の記事</span>
       <h2 class="t-h2">割合を持つ記事（article--block）</h2>
       <p class="t-body">
@@ -290,9 +289,7 @@
         から editor.js が書き込みます。<strong>手で書かないこと。</strong>
       </p>
       <span class="spec">article--block ＋ style="--share: N%"（この記事は 40%）</span>
-    </article>
-
-    <article class="article article--block article--rest" data-article="g7b">
+    </article><article class="article article--block article--rest" data-article="g7b">
       <h2 class="t-h2">残りを取る記事（article--rest）</h2>
       <p class="t-body">
         <code>article--rest</code> はそのページの余りを取ります（<code>.fill</code> と同じ考え方）。
@@ -300,7 +297,9 @@
         「割当を約 N mm 超えています」と検査が指摘します。
       </p>
       <span class="spec">article--block article--rest（--share は持たない）</span>
-    </article>
+    </article></div></section>
+
+
   </div>
   <span class="page__runhead">見本帳</span>
   <span class="page__folio"></span>
@@ -311,12 +310,39 @@
      枠・記事・占有ページ数を決め、記事ごとに担当者と締切を割り当ててください。
      記事の掲載ページはここには持ちません。紙面の data-article から
      毎回読み直すので、原稿を動かしても計画とずれません。 -->
+<!-- ページ → セクション → 記事：同じ型で1本と複数本を組む見本 -->
+<section class="page">
+  <div class="page__body">
+    <section class="content-section" data-section="s-gallery-multiple" data-layout="stack" style="--section-share: 50%">
+      <h2 class="t-band content-section__title" data-section-title="">活動報告：記事2本</h2>
+      <div class="content-section__articles" data-section-articles="">
+        <article class="article article--block article--flow" data-article="g8a" style="--share: 50%">
+          <h3 class="t-h2" data-editable="">清掃活動</h3><p data-editable="">見出しと本文は記事ごとに持ちます。</p>
+        </article>
+        <article class="article article--block article--flow" data-article="g8b" style="--share: 50%">
+          <h3 class="t-h2" data-editable="">子ども教室</h3><p data-editable="">共通見出しと記事の並べ方はセクションが持ちます。</p>
+        </article>
+      </div>
+    </section>
+    <section class="content-section" data-section="s-gallery-single" data-layout="stack" style="--section-share: 50%">
+      <h2 class="t-band content-section__title" data-section-title="">活動報告：記事1本</h2>
+      <div class="content-section__articles" data-section-articles="">
+        <article class="article article--block article--flow article--rest" data-article="g8c">
+          <h3 class="t-h2" data-editable="">地域交流会</h3><p data-editable="">記事が1本なら、セクション内の全体を使います。</p>
+        </article>
+      </div>
+    </section>
+  </div>
+  <span class="page__runhead">セクションと記事の階層</span><span class="page__folio"></span>
+</section>
+
 <script type="application/json" id="kaiho-meta">
 {
   "issue": "コンポーネント見本帳",
   "date": "",
   "format": "A4",
   "schedule": {},
+  "released": true,
   "editor": {
     "name": "デザインシステム管理者",
     "contact": ""
@@ -327,61 +353,61 @@
         "id": "g1",
         "title": "見出し",
         "template": "free",
-        "pages": 1,
         "owner": "デザインシステム管理者",
         "contact": "",
         "current": "signoff",
-        "schedule": {}
+        "schedule": {},
+        "share": "rest"
       },
       {
         "id": "g2",
         "title": "本文",
         "template": "free",
-        "pages": 1,
         "owner": "デザインシステム管理者",
         "contact": "",
         "current": "signoff",
-        "schedule": {}
+        "schedule": {},
+        "share": "rest"
       },
       {
         "id": "g3",
         "title": "図版",
         "template": "free",
-        "pages": 1,
         "owner": "デザインシステム管理者",
         "contact": "",
         "current": "signoff",
-        "schedule": {}
+        "schedule": {},
+        "share": "rest"
       },
       {
         "id": "g4",
         "title": "囲み・引用",
         "template": "free",
-        "pages": 1,
         "owner": "デザインシステム管理者",
         "contact": "",
         "current": "signoff",
-        "schedule": {}
+        "schedule": {},
+        "share": "rest"
       },
       {
         "id": "g5",
         "title": "リスト・表・段組",
         "template": "free",
-        "pages": 1,
         "owner": "デザインシステム管理者",
         "contact": "",
         "current": "signoff",
-        "schedule": {}
+        "schedule": {},
+        "share": "rest"
       },
       {
         "id": "g6",
         "title": "使い方の約束",
         "template": "free",
-        "pages": 1,
         "owner": "デザインシステム管理者",
         "contact": "",
         "current": "signoff",
-        "schedule": {}
+        "schedule": {},
+        "share": "rest"
       },
       {
         "id": "g7a",
@@ -390,7 +416,8 @@
         "contact": "",
         "current": "signoff",
         "schedule": {},
-        "share": 40
+        "share": 40,
+        "template": "free"
       },
       {
         "id": "g7b",
@@ -399,25 +426,126 @@
         "owner": "デザインシステム管理者",
         "contact": "",
         "current": "signoff",
+        "schedule": {},
+        "template": "free"
+      },
+      {
+        "id": "g8a",
+        "title": "清掃活動",
+        "template": "free",
+        "share": 50,
+        "owner": "デザインシステム管理者",
+        "current": "signoff",
+        "schedule": {}
+      },
+      {
+        "id": "g8b",
+        "title": "子ども教室",
+        "template": "free",
+        "share": 50,
+        "owner": "デザインシステム管理者",
+        "current": "signoff",
+        "schedule": {}
+      },
+      {
+        "id": "g8c",
+        "title": "地域交流会",
+        "template": "free",
+        "share": "rest",
+        "owner": "デザインシステム管理者",
+        "current": "signoff",
         "schedule": {}
       }
     ],
-    "frames": [
+    "sections": [
+      {
+        "id": "s-gallery-multiple",
+        "title": "活動報告：記事2本",
+        "template": "report",
+        "pages": 1,
+        "articles": [
+          "g8a",
+          "g8b"
+        ]
+      },
+      {
+        "id": "s-gallery-single",
+        "title": "活動報告：記事1本",
+        "template": "report",
+        "pages": 1,
+        "articles": [
+          "g8c"
+        ]
+      },
       {
         "id": "f-g7",
         "title": "1 ページに複数の記事",
-        "template": "free",
+        "template": "standard",
         "pages": 1,
         "articles": [
           "g7a",
           "g7b"
         ]
+      },
+      {
+        "id": "s-g1",
+        "title": "見出し",
+        "template": "standard",
+        "pages": 1,
+        "articles": [
+          "g1"
+        ]
+      },
+      {
+        "id": "s-g2",
+        "title": "本文",
+        "template": "standard",
+        "pages": 1,
+        "articles": [
+          "g2"
+        ]
+      },
+      {
+        "id": "s-g3",
+        "title": "図版",
+        "template": "standard",
+        "pages": 1,
+        "articles": [
+          "g3"
+        ]
+      },
+      {
+        "id": "s-g4",
+        "title": "囲み・引用",
+        "template": "standard",
+        "pages": 1,
+        "articles": [
+          "g4"
+        ]
+      },
+      {
+        "id": "s-g5",
+        "title": "リスト・表・段組",
+        "template": "standard",
+        "pages": 1,
+        "articles": [
+          "g5"
+        ]
+      },
+      {
+        "id": "s-g6",
+        "title": "使い方の約束",
+        "template": "standard",
+        "pages": 1,
+        "articles": [
+          "g6"
+        ]
       }
     ]
-  },
-  "released": true
+  }
 }
 </script>
 
-</body>
-</html>
+
+
+</body></html>

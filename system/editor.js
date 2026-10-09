@@ -84,7 +84,7 @@
   var ROLE_LABELS = { editor: "編集長", staff: "担当者", viewer: "閲覧者" };
 
   var STEP_HELP = {
-    plan: "記事ごとに型と担当者を決め、「ページ・記事の配置」からページに置きましょう。",
+    plan: "ページにセクションを置き、その中に記事を配置します。セクションと記事はそれぞれの型を選びます。",
     write: "記事の「原稿を書く」から紙面を開き、青い枠の中を押して入力します。変更したら保存しましょう。",
     proof: "紙面を読み、気になる文章を選んでコメントを付けます。確認が終わった記事を校了にします。",
     release: "検査と確認項目を見直してから、印刷用データを出力します。背景あり・A4・倍率100%で印刷してください。"
@@ -119,6 +119,7 @@
 
   /* 設定で直したテンプレートの markup の中で、記事 ID が入る場所の目印 */
   var ARTICLE_TOKEN = "__ARTICLE__";
+  var SECTION_TOKEN = "__SECTION__";
 
   var DEFAULT_META = {
     issue: "",
@@ -130,7 +131,7 @@
     released: false,
     editor: { name: "", contact: "" },
     plan: {
-      frames: [],     /* { id, title, template, pages, articles: [記事ID…] } */
+      sections: [],   /* { id, title, template, pages, articles: [記事ID…] } */
       articles: []    /* { id, title, share, owner, contact, current, schedule } / { id, continues, share } */
     }
   };
@@ -196,7 +197,7 @@
     quote: null,       /* 紙面で選んだ引用の控え */
     editorFocus: null, /* 決定 15: 編集長が原稿作成で選んだ絞り込み。null = 全員、"" = 担当未設定 */
     checklist: {},     /* 入稿前の目視チェック。保存しない */
-    settingsTab: "templates",
+    settingsTab: "sectionTemplates",
     templateId: null,
     tplMode: "text",
     root: null         /* 作業フォルダ（File System Access API のディレクトリハンドル） */
@@ -321,6 +322,7 @@
 
     migrateZeroPageArticles(meta);
     migrateArticleTemplates(meta);
+    migrateSections(meta);
     return meta;
   }
 
@@ -366,6 +368,37 @@
     });
   }
 
+  /* 枠・暗黙の枠を明示的なセクションに移す。記事所属の情報源は articles[] だけ。 */
+  function migrateSections(meta) {
+    var plan = meta.plan, list = Array.isArray(plan.sections) ? plan.sections : [];
+    (plan.frames || []).forEach(function (frame) {
+      if (list.some(function (section) { return section.id === frame.id; })) { return; }
+      var first = plan.articles.find(function (a) { return (frame.articles || []).indexOf(a.id) >= 0 && !a.continues; });
+      list.push({ id: frame.id, title: frame.title || (first && first.title) || "セクション",
+        template: first && first.template === "report" ? "report" : "standard",
+        pages: frame.pages, articles: (frame.articles || []).slice() });
+    });
+    var used = {};
+    list.forEach(function (section) {
+      section.template = section.template || "standard";
+      section.articles = Array.isArray(section.articles) ? section.articles : [];
+      section.articles.forEach(function (id) { used[id] = true; });
+    });
+    plan.articles.forEach(function (a) {
+      if (used[a.id]) { return; }
+      var parentSection = a.continues && list.find(function (section) { return section.articles.indexOf(a.continues) >= 0; });
+      if (parentSection) { parentSection.articles.push(a.id); used[a.id] = true; return; }
+      var id = "s-" + a.id, n = 1;
+      while (list.some(function (section) { return section.id === id; })) { id = "s-" + a.id + "-" + n++; }
+      list.push({ id: id, title: a.title || "セクション", template: a.template === "report" ? "report" : "standard",
+        pages: a.pages, articles: [a.id] });
+      used[a.id] = true;
+    });
+    plan.articles.forEach(function (a) { delete a.pages; });
+    plan.sections = list;
+    delete plan.frames;
+  }
+
   /* meta を DOM へ書き戻す。中身が変わったときだけ書いて「未保存」にする。
      変更のたびに呼び出し元で書き忘れる事故を、ここ1か所で防ぐ */
   function syncMeta() {
@@ -408,7 +441,12 @@
     var s = window.KAIHO_SETTINGS;
     s = (s && typeof s === "object") ? JSON.parse(JSON.stringify(s)) : {};
     if (!Array.isArray(s.members)) { s.members = []; }
-    if (!s.templates || typeof s.templates !== "object") { s.templates = {}; }
+    if (!s.articleTemplates || typeof s.articleTemplates !== "object") { s.articleTemplates = {}; }
+    Object.keys(s.templates || {}).forEach(function (id) {
+      if (!s.articleTemplates[id]) { s.articleTemplates[id] = s.templates[id]; }
+    });
+    if (!s.sectionTemplates || typeof s.sectionTemplates !== "object") { s.sectionTemplates = {}; }
+    delete s.templates;
     s.members.forEach(function (m) {
       if (!ROLE_LABELS[m.role]) { m.role = "staff"; }
       if (!m.contact) { m.contact = ""; }
@@ -445,7 +483,7 @@
   /* 設定の上書きを重ねた一覧を作り直す。設定のテンプレートを直したら呼ぶ */
   function rebuildTemplates() {
     var base = baseTemplates();
-    var edits = state.settings ? state.settings.templates : {};
+    var edits = state.settings ? state.settings.articleTemplates : {};
     var list = base.map(function (t) { return applyTemplateEdit(t, edits[t.id]); });
     /* 設定で新しく作ったテンプレート。土台は free */
     var free = base.find(function (t) { return t.id === "free"; }) || base[0];
@@ -455,19 +493,28 @@
       list.push(applyTemplateEdit(custom, edits[id]));
     });
     state.templates = list;
+    var sectionEdits = state.settings ? state.settings.sectionTemplates : {};
+    var sectionBase = baseSectionTemplates();
+    state.sectionTemplates = sectionBase.map(function (t) { return applyTemplateEdit(t, sectionEdits[t.id], "section"); });
+    Object.keys(sectionEdits).forEach(function (id) {
+      if (sectionBase.some(function (t) { return t.id === id; })) { return; }
+      state.sectionTemplates.push(applyTemplateEdit(Object.assign({}, sectionBase[0], {
+        id: id, label: "新しいセクションテンプレート"
+      }), sectionEdits[id], "section"));
+    });
   }
 
-  function applyTemplateEdit(t, edit) {
+  function applyTemplateEdit(t, edit, kind) {
     var copy = Object.assign({}, t);
     if (!edit) { return copy; }
-    ["label", "pages", "fixed", "toc", "once"].forEach(function (k) {
+    ["label", "pages", "fixed", "toc", "once", "layout", "heading"].forEach(function (k) {
       if (edit[k] !== undefined) { copy[k] = edit[k]; }
     });
     if (Array.isArray(edit.markup) && edit.markup.length) {
       var original = t.markup;
       copy.markup = function (id, pageIndex) {
         var idx = pageIndex || 0;
-        if (typeof edit.markup[idx] === "string") { return edit.markup[idx].split(ARTICLE_TOKEN).join(id); }
+        if (typeof edit.markup[idx] === "string") { return edit.markup[idx].split(kind === "section" ? SECTION_TOKEN : ARTICLE_TOKEN).join(id); }
         return original ? original(id, idx) : articleMarkup(id, true);
       };
     }
@@ -488,19 +535,109 @@
   }
 
   /* templateById() と違い、見つからなければ null。綴り間違いを検査で拾うためだけに使う */
-  function findTemplateRaw(id) {
-    return articleTemplates().find(function (t) { return t.id === id; }) || null;
+  function findTemplateRaw(id, kind) {
+    return templatesOf(kind).find(function (t) { return t.id === id; }) || null;
+  }
+
+  function baseSectionTemplates() {
+    var list = window.KAIHO_SECTION_TEMPLATES;
+    return Array.isArray(list) && list.length ? list : [{ id: "standard", label: "標準セクション", layout: "stack", heading: true,
+      markup: function (id) { return '<section class="content-section" data-section="' + id + '"><h2 class="t-h2 content-section__title" data-section-title data-editable>セクション見出し</h2><div class="content-section__articles" data-section-articles></div></section>'; } }];
+  }
+  function sectionTemplates() { return state.sectionTemplates || baseSectionTemplates(); }
+  function sectionTemplateById(id) {
+    return sectionTemplates().find(function (t) { return t.id === id; }) || sectionTemplates()[0];
+  }
+  function templatesOf(kind) { return kind === "section" ? sectionTemplates() : articleTemplates(); }
+  function templateKind() { return state.settingsTab === "sectionTemplates" ? "section" : "article"; }
+  function settingsMap(kind) { return kind === "section" ? state.settings.sectionTemplates : state.settings.articleTemplates; }
+  function sectionById(id) { return sections().find(function (section) { return section.id === id; }) || null; }
+  function sectionPages(id) { return pages().filter(function (page) { return !!$('[data-section="' + id + '"]', page); }); }
+
+  function sectionHolder(section, pageIndex) {
+    var t = sectionTemplateById(section.template), holder = el("div");
+    holder.innerHTML = rebaseMarkup(t.markup(section.id, pageIndex || 0));
+    var node = $('[data-section]', holder);
+    if (!node) { node = el("section", { "class": "content-section", "data-section": section.id }); }
+    node.classList.add("content-section");
+    node.setAttribute("data-section", section.id);
+    node.setAttribute("data-layout", t.layout === "columns" ? "columns" : "stack");
+    var slot = $("[data-section-articles]", node);
+    if (!slot) { slot = el("div", { "class": "content-section__articles", "data-section-articles": "" }); node.appendChild(slot); }
+    slot.classList.add("content-section__articles");
+    var title = $("[data-section-title]", node);
+    if (title) { if (title.hasAttribute("data-editable")) { title.textContent = section.title || t.label; } title.hidden = t.heading === false; }
+    return node;
+  }
+
+  /* 既存の原稿は display:contents の器で包み、改行・写真・紙面の寸法を保つ。 */
+  function migrateSectionDOM() {
+    pages().forEach(function (page) {
+      var body = $(".page__body", page), previous = null;
+      if (!body) { return; }
+      Array.prototype.slice.call(body.children).forEach(function (node) {
+        var id = node.getAttribute("data-article");
+        if (!id) { previous = null; return; }
+        var section = sectionOfArticle(id), sectionId = section ? section.id : "unplanned-" + id;
+        var wrapper = previous && previous.getAttribute("data-section") === sectionId ? previous : null;
+        if (!wrapper) {
+          wrapper = el("section", { "class": "content-section content-section--legacy", "data-section": sectionId }, [
+            el("div", { "class": "content-section__articles", "data-section-articles": "" })
+          ]);
+          body.insertBefore(wrapper, node);
+        }
+        $("[data-section-articles]", wrapper).appendChild(node);
+        previous = wrapper;
+      });
+    });
+  }
+
+  function balanceSections(page) {
+    var nodes = $$(":scope > .page__body > [data-section]", page);
+    nodes.forEach(function (node) {
+      node.classList.toggle("content-section--allocated", nodes.length > 1);
+      node.style.setProperty("--section-share", String(100 / nodes.length) + "%");
+    });
+  }
+
+  function ensureSectionOnPage(page, section) {
+    var node = $('[data-section="' + section.id + '"]', page);
+    if (!node) {
+      node = sectionHolder(section, sectionPages(section.id).length);
+      $(".page__body", page).appendChild(node);
+      balanceSections(page);
+    }
+    return $("[data-section-articles]", node);
+  }
+
+  function applySectionTemplate(section) {
+    sectionPages(section.id).forEach(function (page, index) {
+      var old = $('[data-section="' + section.id + '"]', page), node = sectionHolder(section, index);
+      var slot = $("[data-section-articles]", node), oldSlot = $("[data-section-articles]", old);
+      while (oldSlot.firstChild) { slot.appendChild(oldSlot.firstChild); }
+      $$('[data-article]', slot).forEach(function (article) { article.classList.add("article--block", "article--flow"); });
+      old.replaceWith(node);
+      balanceSections(page);
+    });
+    articles().forEach(function (a) { applyShareToDOM(a.id, a.share); });
+    markDirty("issue");
+  }
+  function syncSectionTitle(section) {
+    pages().forEach(function (page) {
+      var node = $('[data-section="' + section.id + '"] [data-section-title]', page);
+      if (node && node.hasAttribute("data-editable") && node.textContent !== section.title) { node.textContent = section.title; }
+    });
   }
 
   /* ==========================================================================
-     編集計画（記事・枠）
+     編集計画（ページ・セクション・記事）
      --------------------------------------------------------------------------
-     ページを占有するのは「枠」。記事はページではなく枠の中の割合を持つ（決定 11）。
-     枠に属さない記事は、その記事1本だけの暗黙の枠として扱う（既存号の互換）。
+     セクションが共通見出し・並べ方・確保ページ数を持ち、記事はその中の割合を持つ。
+     旧号の枠と独立記事は readMeta() で明示的なセクションへ移す（決定 17）。
      ========================================================================== */
 
   function articles() { return state.meta.plan.articles; }
-  function frames() { return state.meta.plan.frames; }
+  function sections() { return state.meta.plan.sections; }
 
   function articleById(id) {
     for (var i = 0; i < articles().length; i++) {
@@ -509,35 +646,10 @@
     return null;
   }
 
-  /* 暗黙の枠は毎回作り直す値オブジェクトで、meta には書き戻さない
-     （meta.plan.frames が唯一の情報源。暗黙の枠は導出値） */
-  function effectiveFrames() {
-    var covered = {};
-    frames().forEach(function (f) {
-      (f.articles || []).forEach(function (id) { covered[id] = true; });
-    });
-    var list = [];
-    var used = {};
-    /* 並び順は記事の並び順に従う。明示の枠は、その先頭の記事の位置に出す */
-    articles().forEach(function (a) {
-      if (covered[a.id]) {
-        var f = frames().find(function (x) { return (x.articles || []).indexOf(a.id) >= 0; });
-        if (f && !used[f.id]) { used[f.id] = true; list.push(f); }
-        return;
-      }
-      if (a.continues) { return; }   /* 枠に入っていない続きは検査に任せる */
-      list.push({
-        id: "_implicit-" + a.id, title: a.title,
-        pages: a.pages, articles: [a.id], implicit: true
-      });
-    });
-    /* 記事の入っていない明示の枠も出す（検査と編集のため） */
-    frames().forEach(function (f) { if (!used[f.id]) { list.push(f); } });
-    return list;
-  }
+  function effectiveSections() { return sections(); }
 
-  function frameOfArticle(articleId) {
-    return effectiveFrames().find(function (f) { return (f.articles || []).indexOf(articleId) >= 0; }) || null;
+  function sectionOfArticle(articleId) {
+    return effectiveSections().find(function (f) { return (f.articles || []).indexOf(articleId) >= 0; }) || null;
   }
 
   function articleTemplate(a) {
@@ -546,7 +658,7 @@
   }
 
   /* pages が未指定ならテンプレートの既定値に落とす */
-  function framePlannedPages(frame) {
+  function sectionPlannedPages(frame) {
     if (frame.pages !== undefined && frame.pages !== null && frame.pages !== "") {
       var p = parseInt(frame.pages, 10);
       if (!isNaN(p) && p >= 0) { return Math.min(p, MAX_PAGES); }
@@ -558,21 +670,27 @@
 
   /* 総ページ数は枠の pages の合計（決定 11）。手入力の欄は無い */
   function plannedTotal() {
-    return effectiveFrames().reduce(function (sum, f) { return sum + framePlannedPages(f); }, 0);
+    var occupied = [], missing = 0;
+    sections().forEach(function (section) {
+      var actual = sectionPages(section.id);
+      actual.forEach(function (page) { if (occupied.indexOf(page) < 0) { occupied.push(page); } });
+      missing += Math.max(0, sectionPlannedPages(section) - actual.length);
+    });
+    return occupied.length + missing;
   }
 
   /* 枠の占有ページ数を書き換える。暗黙の枠なら記事の側に書く */
-  function setFramePages(frame, v) {
-    var target = frame.implicit ? articleById(frame.articles[0]) : frame;
+  function setSectionPages(frame, v) {
+    var target = frame;
     if (isNaN(v)) { delete target.pages; } else { target.pages = Math.max(0, Math.min(MAX_PAGES, v)); }
   }
 
   function setArticleTemplate(a, id) {
     if (!isEditor() || a.continues) { return; }
     a.template = id;
-    var frame = frameOfArticle(a.id);
+    var frame = sectionOfArticle(a.id);
     /* 他の記事と分け合う枠のページ数は、型の変更だけでは増減させない。 */
-    if (frame && frame.implicit) { a.pages = templateById(id).pages || 1; }
+    if (frame && frame.articles.length === 1 && !articlePages(a.id).length) { frame.pages = templateById(id).pages || 1; }
     rerenderAll();
   }
 
@@ -677,35 +795,34 @@
     return prefix + n;
   }
   function newArticleId() { return newId("art-", function (id) { return !!articleById(id); }); }
-  function newFrameId() {
-    return newId("f-", function (id) { return frames().some(function (f) { return f.id === id; }); });
+  function newSectionId() {
+    return newId("f-", function (id) { return sections().some(function (f) { return f.id === id; }); });
   }
 
   /* 記事を計画に足す。既定では「自分1本だけの暗黙の枠」になる */
-  function addArticle(preset) {
+  function addSection(preset) {
+    var section = { id: newSectionId(), title: "新しいセクション " + (sections().length + 1),
+      template: "standard", pages: 1, articles: [] };
+    Object.keys(preset || {}).forEach(function (key) { section[key] = preset[key]; });
+    sections().push(section);
+    return section;
+  }
+
+  function addArticle(preset, section) {
     var a = {
       id: newArticleId(), title: "無題の記事 " + (primaryArticles().length + 1),
       template: "free", share: "rest", owner: "", contact: "",
       current: "manuscript", schedule: {}
     };
-    Object.keys(preset || {}).forEach(function (k) { a[k] = preset[k]; });
-    if (a.pages === undefined) { a.pages = templateById(a.template).pages || 1; }
+    Object.keys(preset || {}).forEach(function (key) { a[key] = preset[key]; });
     articles().push(a);
+    if (!section) { section = addSection({ title: a.title, pages: a.pages || templateById(a.template).pages || 1 }); }
+    delete a.pages;
+    section.articles.push(a.id);
     return a;
   }
 
-  /* 暗黙の枠を明示の枠にする（記事を足す・続きを作る前に要る） */
-  function explicitFrame(frame) {
-    if (!frame.implicit) { return frame; }
-    var a = articleById(frame.articles[0]);
-    var f = {
-      id: newFrameId(), title: a.title,
-      pages: framePlannedPages(frame), articles: [a.id]
-    };
-    delete a.pages;
-    frames().push(f);
-    return f;
-  }
+  function explicitSection(section) { return section; }
 
   /* 記事 id を記事の並び（articles()）の中で、指定の記事の直後へ動かす。
      枠の並び順は記事の並び順から導くので、ここを揃えないと台割が入れ替わる */
@@ -717,28 +834,26 @@
     list.splice(to + 1, 0, item);
   }
 
-  function addArticleToFrame(frame) {
-    var f = explicitFrame(frame);
+  function addArticleToSection(frame) {
+    var f = explicitSection(frame);
     var lastId = f.articles[f.articles.length - 1];
-    var a = addArticle({ share: 50 });
-    delete a.pages;
-    f.articles.push(a.id);
+    var a = addArticle({ share: f.articles.length ? 50 : "rest" }, f);
     if (lastId) { placeAfter(a.id, lastId); }
     /* 先頭の記事が「残り」のままだと、2本とも余りを取り合う */
     var first = articleById(f.articles[0]);
-    if (first && first.share === "rest") { first.share = 50; applyShareToDOM(first.id, 50); }
+    if (first && first !== a && first.share === "rest") { first.share = 50; applyShareToDOM(first.id, 50); }
     return a;
   }
 
   function addContinuation(parent) {
-    var frame = frameOfArticle(parent.id);
-    var f = explicitFrame(frame);
+    var frame = sectionOfArticle(parent.id);
+    var f = explicitSection(frame);
     var child = { id: newId(parent.id + "-", function (id) { return !!articleById(id); }), continues: parent.id, share: "rest" };
     articles().push(child);
     var idx = f.articles.indexOf(parent.id);
     f.articles.splice(idx + 1, 0, child.id);
     placeAfter(child.id, parent.id);
-    if (framePlannedPages(f) < 2) { f.pages = 2; }
+    if (sectionPlannedPages(f) < 2) { f.pages = 2; }
     return child;
   }
 
@@ -752,15 +867,21 @@
     if (!confirm(msg)) { return; }
     var ids = [a.id].concat(child ? [child.id] : []);
     state.meta.plan.articles = articles().filter(function (x) { return ids.indexOf(x.id) < 0; });
-    frames().forEach(function (f) {
+    sections().forEach(function (f) {
       f.articles = (f.articles || []).filter(function (id) { return ids.indexOf(id) < 0; });
     });
     rerenderAll();
   }
 
-  function deleteFrame(f) {
+  function deleteSection(f) {
     if ((f.articles || []).length) { return; }
-    state.meta.plan.frames = frames().filter(function (x) { return x !== f; });
+    sectionPages(f.id).forEach(function (page) {
+      $$('[data-section="' + f.id + '"]', page).forEach(function (node) {
+        if (!$('[data-article]', node)) { node.remove(); markDirty(); }
+      });
+      balanceSections(page);
+    });
+    state.meta.plan.sections = sections().filter(function (x) { return x !== f; });
     rerenderAll();
   }
 
@@ -945,7 +1066,7 @@
     var tools = el("div", { "class": "page-tools" }, chips);
     if (editing) {
       tools.appendChild(pageActions(page));
-      tools.appendChild(buildArticleAssignment(page));
+      tools.appendChild(buildSectionAssignment(page));
     }
     page.appendChild(tools);
   }
@@ -982,9 +1103,9 @@
   /* 枠の記事を、割合に沿ってページごとの組に分ける。
      割合の合計が 100% に達するか「残り」が入ったら、そのページは閉じる。
      記事が1本だけの枠は、その記事がすべてのページを占める（特集の2ページ組など） */
-  function frameGroups(frame) {
+  function sectionGroups(frame) {
     var ids = (frame.articles || []).filter(function (id) { return !!articleById(id); });
-    var planned = framePlannedPages(frame);
+    var planned = sectionPlannedPages(frame);
     if (ids.length <= 1) {
       var g = [];
       for (var i = 0; i < planned; i++) { g.push(ids.slice()); }
@@ -1018,13 +1139,11 @@
     return node;
   }
 
-  function composeGroupPage(frame, group, pageIndex) {
-    var shared = (frame.articles || []).length > 1;
-    var body = group.map(function (id) {
-      return articleHolder(articleById(id), pageIndex, shared).outerHTML;
-    }).join("\n");
-    /* 柱・ノンブルはページの設定。複数の記事の型で奪い合わない。 */
-    return composePage(body, group.length === 1 ? articleTemplate(articleById(group[0])) : null, pageIndex);
+  function composeGroupPage(section, group, pageIndex) {
+    var node = sectionHolder(section, pageIndex);
+    var slot = $("[data-section-articles]", node);
+    group.forEach(function (id) { slot.appendChild(articleHolder(articleById(id), pageIndex, true)); });
+    return composePage(node.outerHTML, group.length === 1 ? articleTemplate(articleById(group[0])) : null, pageIndex);
   }
 
   function insertAfterNode(node, anchor) {
@@ -1048,7 +1167,7 @@
      並び順は枠の並び（記事の並び順）どおり。既存のページは動かさない
      （動かすと原稿の位置が変わる）。 */
   function syncPagesToPlan() {
-    var list = effectiveFrames();
+    var list = effectiveSections();
     if (!list.length) {
       alert("編集計画に記事がありません。まず「＋ 記事を足す」で記事を登録してください。");
       return;
@@ -1057,16 +1176,16 @@
 
     list.forEach(function (frame) {
       if (hitMax) { return; }
-      var groups = frameGroups(frame);
+      var groups = sectionGroups(frame);
       var single = (frame.articles || []).length <= 1;
-      var existingAll = [];
+      var existingAll = sectionPages(frame.id).slice();
       (frame.articles || []).forEach(function (id) {
         articlePages(id).forEach(function (p) { if (existingAll.indexOf(p) < 0) { existingAll.push(p); } });
       });
       existingAll.sort(function (x, y) { return pageNumberOf(x) - pageNumberOf(y); });
 
       groups.forEach(function (group, gi) {
-        if (hitMax || !group.length) { return; }
+        if (hitMax) { return; }
         var present;
         if (single) {
           /* 1本の記事が複数ページを占める枠。gi 枚目が紙面にあるかで見る */
@@ -1080,10 +1199,9 @@
           /* ページはあるが、同じページを分け合う記事の入れ物がまだ無い（枠に記事を
              足した直後）。ページの末尾に足すだけで、既存の入れ物には触れない */
           if (!single) {
-            var body = $(".page__body", present);
+            var body = ensureSectionOnPage(present, frame);
             group.forEach(function (id) {
               if (body && !articlePages(id).length) {
-                $$("[data-article]", body).forEach(function (node) { node.classList.add("article--block", "article--flow"); });
                 body.appendChild(articleHolder(articleById(id), 0, true));
                 created++;
               }
@@ -1113,6 +1231,7 @@
   }
 
   function afterPagesChanged() {
+    migrateSectionDOM();
     articles().forEach(function (a) { applyShareToDOM(a.id, a.share); });
     decoratePages();
     markDirty("issue");
@@ -1173,27 +1292,57 @@
 
   function buildPageOrder() {
     var list = el("div", { "class": "page-order" }, [el("p", { "class": "panel-note",
-      text: "各ページに記事を選んで配置します。新しい記事は型を選んで作れます。ページは末尾に追加。移動は原稿を保持し、削除は記事の計画を残します。" })]);
+      text: "ページにセクションを置き、その中に記事を配置します。ページは末尾に追加。移動は原稿を保持し、削除は計画を残します。" })]);
     pages().forEach(function (page, index) {
-      var titles = [], ids = [];
-      $$("[data-article]", page).forEach(function (node) {
-        var id = node.getAttribute("data-article"), a = articleById(id);
-        if (ids.indexOf(id) < 0) { ids.push(id); titles.push(a ? displayTitleOf(a) : id); }
+      var card = el("div", { "class": "page-order-card" }, [el("strong", { text: "p." + (index + 1) }), pageActions(page, "panel")]);
+      $$(':scope > .page__body > [data-section]', page).forEach(function (node) {
+        var section = sectionById(node.getAttribute("data-section"));
+        if (!section) { return; }
+        var titles = $$('[data-article]', node).map(function (block) {
+          var a = articleById(block.getAttribute("data-article"));
+          return a ? displayTitleOf(a) : "計画にない記事";
+        });
+        card.appendChild(el("div", { "class": "page-section-card", "data-section-card": section.id }, [
+          el("strong", { text: "セクション：" + section.title }),
+          el("div", { "class": "page-order-title", text: titles.join("／") || "記事はまだありません" }),
+          buildArticleAssignment(page, section)
+        ]));
       });
-      list.appendChild(el("div", { "class": "page-order-card" }, [
-        el("strong", { text: "p." + (index + 1) }),
-        el("div", { "class": "page-order-title", text: titles.join("／") || "空のページ" }),
-        pageActions(page, "panel"),
-        buildArticleAssignment(page)
-      ]));
+      card.appendChild(buildSectionAssignment(page));
+      list.appendChild(card);
     });
     return list;
   }
 
-  function buildArticleAssignment(page) {
+  function buildSectionAssignment(page) {
+    var choices = sections().filter(function (section) { return !sectionPages(section.id).length; });
+    var pick = el("select", { "class": "page-tools__pick", "aria-label": "p." + pageNumberOf(page) + " に配置するセクション" },
+      [el("option", { value: "", text: "配置するセクションを選ぶ" })].concat(choices.map(function (section) {
+        return el("option", { value: section.id, text: section.title });
+      }), sectionTemplates().map(function (t) {
+        return el("option", { value: "template:" + t.id, text: "新しいセクション：" + t.label });
+      })));
+    var button = el("button", { type: "button", "class": "page-tools__add", text: "セクションを配置", disabled: "disabled",
+      onclick: function () {
+        var value = pick.value, section;
+        if (value.indexOf("template:") === 0) {
+          var id = value.slice(9);
+          section = addSection({ template: id, title: sectionTemplateById(id).label });
+        } else { section = sectionById(value); }
+        if (!section || sectionPages(section.id).length) { return; }
+        if (document.activeElement) { document.activeElement.blur(); }
+        ensureSectionOnPage(page, section);
+        afterPagesChanged();
+        showBarToast("p." + pageNumberOf(page) + " に「" + section.title + "」セクションを配置しました");
+      } });
+    pick.addEventListener("change", function () { button.disabled = !pick.value; });
+    return el("div", { "class": "page-assign" }, [pick, button]);
+  }
+
+  function buildArticleAssignment(page, section) {
     var placement = articlePlacement();
-    var choices = articles().filter(function (a) { return !placement[a.id]; });
-    var pick = el("select", { "class": "page-tools__pick", "aria-label": "p." + pageNumberOf(page) + " に配置する記事" },
+    var choices = articles().filter(function (a) { return section.articles.indexOf(a.id) >= 0 && !placement[a.id]; });
+    var pick = el("select", { "class": "page-tools__pick", "aria-label": "p." + pageNumberOf(page) + " の「" + section.title + "」に配置する記事" },
       [el("option", { value: "", text: "配置する記事を選ぶ" })].concat(choices.map(function (a) {
         return el("option", { value: a.id, text: displayTitleOf(a) + "（" + articleTemplate(a).label + "）" });
       }), articleTemplates().map(function (t) {
@@ -1202,53 +1351,30 @@
     var button = el("button", { type: "button", "class": "page-tools__add", text: "記事を配置", disabled: "disabled",
       onclick: function () {
         var value = pick.value;
-        if (value.indexOf("template:") === 0) { addArticleToPage(page, null, value.slice(9)); }
-        else if (value) { addArticleToPage(page, value); }
+        if (value.indexOf("template:") === 0) { addArticleToPage(page, null, value.slice(9), section); }
+        else if (value) { addArticleToPage(page, value, null, section); }
       } });
     pick.addEventListener("change", function () { button.disabled = !pick.value; });
     return el("div", { "class": "page-assign" }, [pick, button]);
   }
 
-  /* 未配置の記事だけを置く。既存原稿の入れ物を型の選択で置き換えない。 */
-  function addArticleToPage(page, articleId, templateId) {
-    if (!isEditor() || state.step !== "plan") { return; }
-    var body = $(".page__body", page);
-    if (!body || (articleId && articlePages(articleId).length)) { return; }
-    if (document.activeElement && document.activeElement.blur) { document.activeElement.blur(); }
-    var firstNode = $("[data-article]", page);
-    var hostFrame = firstNode ? frameOfArticle(firstNode.getAttribute("data-article")) : null;
+  function addArticleToPage(page, articleId, templateId, section) {
+    if (!isEditor() || state.step !== "plan" || !section) { return; }
+    if (articleId && (section.articles.indexOf(articleId) < 0 || articlePages(articleId).length)) { return; }
+    if (document.activeElement) { document.activeElement.blur(); }
+    var body = ensureSectionOnPage(page, section);
     var a = articleId ? articleById(articleId) : addArticle({ template: templateId || "free",
-      title: articleTemplate({ template: templateId || "free" }).label + " " + (primaryArticles().length + 1) });
+      title: templateById(templateId || "free").label + " " + (primaryArticles().length + 1) }, section);
     if (!a) { return; }
-
-    if (hostFrame && hostFrame.articles.indexOf(a.id) < 0) {
-      /* 配置先のページを分け合う。型は移さず、記事ごとに保持する。 */
-      var previousFrame = frameOfArticle(a.id);
-      var f = explicitFrame(hostFrame);
-      frames().forEach(function (old) {
-        if (old !== f) { old.articles = (old.articles || []).filter(function (id) { return id !== a.id; }); }
-      });
-      state.meta.plan.frames = frames().filter(function (old) { return old !== previousFrame || (old.articles || []).length; });
-      f.articles.push(a.id);
-      delete a.pages;
+    var existing = $$('[data-article]', body);
+    if (existing.length) {
       if (a.share === "rest") { a.share = 50; }
-      var first = articleById(firstNode.getAttribute("data-article"));
+      var first = articleById(existing[0].getAttribute("data-article"));
       if (first && first.share === "rest") { first.share = 50; }
     }
-    /* display: contents の記事も、同居するときは割合を持つ箱にする。 */
-    if (firstNode) {
-      $$('[data-article]', body).forEach(function (node) { node.classList.add("article--block", "article--flow"); });
-    }
-    var block = articleHolder(a, 0, !!firstNode);
-    body.appendChild(block);
-    if (!firstNode) {
-      var tmpl = articleTemplate(a), attrs = (tmpl.pageAttrs || [])[a.continues ? 1 : 0] || {};
-      if (attrs.folio === "none") { page.setAttribute("data-folio", "none"); }
-      var runhead = $(".page__runhead", page);
-      if (runhead && !runhead.textContent.trim()) { runhead.textContent = attrs.runhead || ""; }
-    }
+    body.appendChild(articleHolder(a, 0, true));
     afterPagesChanged();
-    showBarToast("p." + pageNumberOf(page) + " に「" + displayTitleOf(a) + "」を配置しました");
+    showBarToast("「" + section.title + "」に「" + displayTitleOf(a) + "」を配置しました");
   }
 
   /* 入れ物ごと外す。中の原稿も一緒に消えるので必ず確認を取る。
@@ -1371,9 +1497,8 @@
 
   /* offsetTop/offsetHeight は transform: scale() の影響を受けないレイアウト寸法 */
   function positionShareHandle(handle, page, aboveEl) {
-    var body = $(".page__body", page);
-    if (!body) { return; }
-    handle.style.top = (body.offsetTop + aboveEl.offsetTop + aboveEl.offsetHeight) + "px";
+    var rect = aboveEl.getBoundingClientRect(), pageRect = page.getBoundingClientRect();
+    handle.style.top = (rect.bottom - pageRect.top) / zoomFactor() + "px";
   }
 
   function attachShareDrag(handle, page, elA, elB) {
@@ -1383,7 +1508,7 @@
       var artA = articleById(elA.getAttribute("data-article"));
       var artB = articleById(elB.getAttribute("data-article"));
       if (!body || !artA || !artB) { return; }
-      var totalH = body.clientHeight, zoom = zoomFactor(), startY = ev.clientY;
+      var totalH = elA.parentElement.clientHeight || body.clientHeight, zoom = zoomFactor(), startY = ev.clientY;
       var startA = artA.share === "rest" ? null : artA.share;
       var startB = artB.share === "rest" ? null : artB.share;
       var sum = (startA !== null && startB !== null) ? startA + startB : null;
@@ -1422,13 +1547,16 @@
     pages().forEach(function (page) {
       var body = $(".page__body", page);
       if (!body) { return; }
-      var blocks = $$(":scope > .article--block[data-article]", body);
-      for (var i = 0; i < blocks.length - 1; i++) {
-        var handle = el("div", { "class": "share-handle", title: "ドラッグして境目を動かす（5%刻み）" });
-        positionShareHandle(handle, page, blocks[i]);
-        attachShareDrag(handle, page, blocks[i], blocks[i + 1]);
-        page.appendChild(handle);
-      }
+      $$("[data-section-articles]", body).forEach(function (slot) {
+        if (slot.parentElement.getAttribute("data-layout") === "columns") { return; }
+        var blocks = $$(":scope > .article--block[data-article]", slot);
+        for (var i = 0; i < blocks.length - 1; i++) {
+          var handle = el("div", { "class": "share-handle", title: "ドラッグして境目を動かす（5%刻み）" });
+          positionShareHandle(handle, page, blocks[i]);
+          attachShareDrag(handle, page, blocks[i], blocks[i + 1]);
+          page.appendChild(handle);
+        }
+      });
     });
   }
 
@@ -1505,6 +1633,28 @@
       }
     });
 
+    var membership = {};
+    sections().forEach(function (section) {
+      if (!findTemplateRaw(section.template, "section")) {
+        findings.push({ level: "error", message: "セクション「" + section.title + "」のテンプレート「" + section.template + "」は存在しません" });
+      }
+      section.articles.forEach(function (id) {
+        if (!articleById(id)) { findings.push({ level: "error", message: "セクション「" + section.title + "」の記事「" + id + "」が計画にありません" }); }
+        if (membership[id]) { findings.push({ level: "error", message: "記事「" + id + "」が複数のセクションに所属しています" }); }
+        membership[id] = section.id;
+      });
+    });
+    pages().forEach(function (page, index) {
+      $$('[data-section]', page).forEach(function (node) {
+        var id = node.getAttribute("data-section");
+        if (!sectionById(id)) { findings.push({ level: "error", node: node, message: "p." + (index + 1) + " のセクション「" + id + "」が計画にありません" }); }
+        $$('[data-article]', node).forEach(function (article) {
+          var articleId = article.getAttribute("data-article");
+          if (membership[articleId] && membership[articleId] !== id) { findings.push({ level: "error", node: article, message: "記事「" + articleId + "」の所属セクションと紙面が一致しません" }); }
+        });
+      });
+    });
+
     var onceCounts = {};
     primaryArticles().forEach(function (a) {
       var t = articleTemplate(a), pl = mergedPlacement(a.id, placement);
@@ -1518,7 +1668,7 @@
           "）ですが、p.1 にありません（現在 " + placementLabel(pl) + "）" });
       }
     });
-    effectiveFrames().forEach(function (f) {
+    effectiveSections().forEach(function (f) {
       var pl = null;
       (f.articles || []).forEach(function (id) {
         var p = placement[id];
@@ -1527,14 +1677,14 @@
       });
       if (pl) {
         var used = pl.pages.filter(function (v, i, arr) { return arr.indexOf(v) === i; }).length;
-        var plannedPages = framePlannedPages(f);
+        var plannedPages = sectionPlannedPages(f);
         if (plannedPages > 0 && used > plannedPages) {
           findings.push({ level: "warn",
             message: "「" + f.title + "」は計画の占有ページ数（" + plannedPages + "）より多い " + used + " ページが紙面にあります" });
         }
       }
-      if (!f.implicit && !(f.articles || []).length) {
-        findings.push({ level: "warn", message: "枠「" + f.title + "」に記事が 1 本も入っていません" });
+      if (!(f.articles || []).length) {
+        findings.push({ level: "warn", message: "セクション「" + f.title + "」に記事が 1 本も入っていません" });
       }
     });
     Object.keys(onceCounts).forEach(function (id) {
@@ -1640,24 +1790,23 @@
   /* 決定 12: 同じページの割合の合計を 100% 基準で見る（許容 ±2%） */
   function checkShares() {
     pages().forEach(function (page, i) {
-      var seen = {}, restCount = 0, sum = 0, any = false;
-      $$(".article--block[data-article]", page).forEach(function (n) {
-        var id = n.getAttribute("data-article");
-        var a = articleById(id);
-        if (seen[id] || !a) { return; }
-        seen[id] = true; any = true;
-        if (a.share === "rest") { restCount++; } else { sum += shareToNumber(a.share); }
+      $$("[data-section-articles]", page).forEach(function (slot) {
+        if (slot.parentElement.getAttribute("data-layout") === "columns") { return; }
+        var seen = {}, restCount = 0, sum = 0, any = false;
+        $$(":scope > .article--block[data-article]", slot).forEach(function (node) {
+          var id = node.getAttribute("data-article"), a = articleById(id);
+          if (seen[id] || !a) { return; }
+          seen[id] = true; any = true;
+          if (a.share === "rest") { restCount++; } else { sum += shareToNumber(a.share); }
+        });
+        if (!any) { return; }
+        var pct = Math.round(sum * 100);
+        if (pct > 102 || (pct < 98 && !restCount)) {
+          findings.push({ level: "warn", message: "p." + (i + 1) + " のセクション内の記事の割合の合計が 100% " +
+            (pct > 102 ? "を超えています" : "に足りていません") + "（合計 " + pct + "%）" });
+        }
+        if (restCount >= 2) { findings.push({ level: "warn", message: "p." + (i + 1) + " の同じセクションに「残り」の記事が " + restCount + " 本あります" }); }
       });
-      if (!any) { return; }
-      var pct = Math.round(sum * 100);
-      if (pct > 102) {
-        findings.push({ level: "warn", message: "p." + (i + 1) + " に載る記事の割合の合計が 100% を超えています（合計 " + pct + "%）" });
-      } else if (pct < 98 && !restCount) {
-        findings.push({ level: "warn", message: "p." + (i + 1) + " に載る記事の割合の合計が 100% に足りていません（合計 " + pct + "%）" });
-      }
-      if (restCount >= 2) {
-        findings.push({ level: "warn", message: "p." + (i + 1) + " に「残り」の記事が " + restCount + " 本あります（1 ページに 1 本まで）" });
-      }
     });
   }
 
@@ -1815,7 +1964,12 @@
   }
 
   var inputTimer = null;
-  function onInput() {
+  function onInput(ev) {
+    var title = ev && ev.target.closest("[data-section-title]");
+    if (title) {
+      var host = title.closest("[data-section]"), section = host && sectionById(host.getAttribute("data-section"));
+      if (section) { section.title = title.textContent; syncSectionTitle(section); syncMeta(); }
+    }
     markDirty("issue");
     clearTimeout(inputTimer);
     inputTimer = setTimeout(function () { checkAll(); updateStatusBits(); }, 400);
@@ -2176,9 +2330,9 @@
     buildPlanForm(plan);
 
     var s1 = section("号の設定", false, [meta], "sec-meta");
-    var s2 = section("枠・記事・担当", true, [plan], "sec-plan");
+    var s2 = section("セクション・記事・担当", true, [plan], "sec-plan");
     if (!isEditor()) { makeReadOnly(s1); makeReadOnly(s2); }
-    var pageSection = section("ページ・記事の配置", true, [buildPageOrder()], "sec-pages");
+    var pageSection = section("ページ・セクション・記事の配置", true, [buildPageOrder()], "sec-pages");
     if (!isEditor()) { makeReadOnly(pageSection); }
     content.appendChild(pageSection);
     content.appendChild(s1);
@@ -2273,23 +2427,29 @@
         disabled: actual >= MAX_PAGES ? "disabled" : null, onclick: addPage })
     ]));
     container.appendChild(el("p", { "class": "panel-note",
-      text: "記事ごとにテンプレートを選び、ページ一覧から配置します。枠はページ数と割合をまとめる単位です。同じページに別々の型の記事を置けます。" }));
+      text: "ページ → セクション → 記事の順で組みます。セクションは共通見出しと並べ方、記事は写真・本文の型を選びます。" }));
 
-    effectiveFrames().forEach(function (frame) {
-      var fcard = el("div", { "class": "frame-card", "data-focus": focusAttrOfFrame(frame) });
+    effectiveSections().forEach(function (frame) {
+      var fcard = el("div", { "class": "frame-card", "data-focus": focusAttrOfSection(frame) });
       fcard.appendChild(el("div", { "class": "frame-card__head" }, [
-        frame.implicit ? el("span", { "class": "frame-card__title", text: frame.title })
-          : el("input", { type: "text", value: frame.title, "aria-label": "枠の名前",
-              oninput: function () { frame.title = this.value; syncMeta(); renderPlanSheetIfShown(); } }),
-        frame.implicit ? el("span", { "class": "frame-card__implicit", text: "記事 1 本" }) : null,
-        (!frame.implicit && !(frame.articles || []).length)
-          ? el("button", { type: "button", "class": "frame-card__del", text: "枠を外す", onclick: function () { deleteFrame(frame); } })
+        el("input", { type: "text", value: frame.title, "aria-label": "セクション名",
+              oninput: function () { frame.title = this.value; syncSectionTitle(frame); syncMeta(); renderPlanSheetIfShown(); } }),
+
+        (!(frame.articles || []).length)
+          ? el("button", { type: "button", "class": "frame-card__del", text: "セクションを外す", onclick: function () { deleteSection(frame); } })
           : null
       ]));
 
+      fcard.appendChild(el("label", { text: "セクションテンプレート" }, [el("select", {
+        "data-section-template-for": frame.id,
+        onchange: function () { frame.template = this.value; applySectionTemplate(frame); rerenderAll(); }
+      }, sectionTemplates().map(function (t) {
+        return el("option", { value: t.id, selected: frame.template === t.id ? "selected" : null, text: t.label });
+      }))]));
+
       fcard.appendChild(el("label", { text: "占有ページ数" }, [el("input", {
-        type: "number", min: "0", max: String(MAX_PAGES), value: String(framePlannedPages(frame)),
-        onchange: function () { setFramePages(frame, parseInt(this.value, 10)); rerenderAll(); }
+        type: "number", min: "0", max: String(MAX_PAGES), value: String(sectionPlannedPages(frame)),
+        onchange: function () { setSectionPages(frame, parseInt(this.value, 10)); rerenderAll(); }
       })]));
 
       (frame.articles || []).forEach(function (articleId) {
@@ -2343,7 +2503,7 @@
         if (child) {
           card.appendChild(el("p", { "class": "panel-note",
             text: "この記事は " + placementLabelForArticle(a.id, placement) + " に分かれています（続き: " + child.id + "）。" }));
-        } else if ((frame.articles || []).length > 1 || framePlannedPages(frame) > 1) {
+        } else if ((frame.articles || []).length > 1 || sectionPlannedPages(frame) > 1) {
           row.appendChild(el("button", { type: "button", "class": "article-card__sub", text: "＋ 続きを作る",
             title: "次のページへ続く入れ物を計画に足す。紙面には「不足しているページを作る」で置く",
             onclick: function () { addContinuation(a); rerenderAll(); } }));
@@ -2352,17 +2512,17 @@
         fcard.appendChild(card);
       });
 
-      fcard.appendChild(el("button", { type: "button", "class": "article-card__sub", text: "＋ この枠に記事を足す",
+      fcard.appendChild(el("button", { type: "button", "class": "article-card__sub", text: "＋ このセクションに記事を足す",
         title: "同じページを分け合う記事を足す（割合で場所を分ける）",
-        onclick: function () { addArticleToFrame(frame); rerenderAll(); } }));
+        onclick: function () { addArticleToSection(frame); rerenderAll(); } }));
       container.appendChild(fcard);
     });
 
-    container.appendChild(el("button", { type: "button", "class": "panel-btn", text: "＋ 記事を足す（新しい枠）",
-      onclick: function () { addArticle(); rerenderAll(); } }));
+    container.appendChild(el("button", { type: "button", "class": "panel-btn", text: "＋ セクションを作る",
+      onclick: function () { addSection(); rerenderAll(); } }));
   }
 
-  function focusAttrOfFrame(frame) {
+  function focusAttrOfSection(frame) {
     if (focusOwner() === null) { return null; }
     return (frame.articles || []).some(function (id) { return focusAttrOf(id) === "mine"; }) ? "mine" : "other";
   }
@@ -2529,10 +2689,10 @@
     table.appendChild(el("thead", null, [el("tr", null, [el("th", { text: "記事" }), el("th", { text: "担当者" })].concat(
       STAGES.map(function (s) { return el("th", { "class": "t-num", text: s.short }); })))]));
     var tbody = el("tbody");
-    effectiveFrames().forEach(function (frame) {
+    effectiveSections().forEach(function (frame) {
       var list = (frame.articles || []).map(articleById).filter(function (a) { return a && !a.continues; });
       if (!list.length) { return; }
-      tbody.appendChild(el("tr", { "class": "stage-grid__frame-row", "data-focus": focusAttrOfFrame(frame) }, [
+      tbody.appendChild(el("tr", { "class": "stage-grid__frame-row", "data-focus": focusAttrOfSection(frame) }, [
         el("td", { colspan: String(2 + STAGES.length), text: frame.title })
       ]));
       list.forEach(function (a) { tbody.appendChild(buildStageRow(a)); });
@@ -2705,9 +2865,9 @@
     }
 
     var rows = primaryArticles().map(function (a) {
-      var frame = frameOfArticle(a.id);
+      var frame = sectionOfArticle(a.id);
       return el("tr", null, [
-        el("td", { text: frame && !frame.implicit ? frame.title : "—" }),
+        el("td", { text: frame ? frame.title : "—" }),
         el("td", { text: a.title }),
         el("td", { text: placementLabelForArticle(a.id, placement) }),
         el("td", { text: a.owner || "未設定", "data-warn": a.owner ? null : "true" }),
@@ -2733,7 +2893,7 @@
       el("h2", { text: "記事・担当・工程" }),
       el("table", { "class": "plan-table" }, [
         el("thead", null, [el("tr", null, [
-          el("th", { scope: "col", text: "枠" }), el("th", { scope: "col", text: "記事" }),
+          el("th", { scope: "col", text: "セクション" }), el("th", { scope: "col", text: "記事" }),
           el("th", { scope: "col", text: "掲載" }), el("th", { scope: "col", text: "担当者" }),
           el("th", { scope: "col", text: "連絡先" })
         ].concat(STAGES.map(function (s) { return el("th", { scope: "col", text: s.label }); })))]),
@@ -2763,8 +2923,8 @@
     rerenderAll();
   }
 
-  function settingsEntry(id) {
-    var t = state.settings.templates;
+  function settingsEntry(id, kind) {
+    var t = kind === "section" ? state.settings.sectionTemplates : state.settings.articleTemplates;
     if (!t[id]) { t[id] = {}; }
     return t[id];
   }
@@ -2772,7 +2932,17 @@
   function settingsChanged() { markDirty("settings"); }
 
   /* 見本の markup。記事 ID の場所は目印のまま組み、画像の場所は号の階層に合わせる */
-  function previewMarkup(t) {
+  function previewMarkup(t, kind) {
+    if (kind === "section") {
+      var node = sectionHolder({ id: SECTION_TOKEN, title: t.label, template: t.id }, 0);
+      var slot = $("[data-section-articles]", node);
+      for (var i = 0; i < (state.tplArticleCount || 1); i++) {
+        var sample = articleHolder({ id: "preview-" + i, template: "free", share: "rest" }, 0, true);
+        sample.setAttribute("data-preview-article", "true");
+        slot.appendChild(sample);
+      }
+      return node.outerHTML;
+    }
     var html = typeof t.markup === "function" ? t.markup(ARTICLE_TOKEN, 0) : articleMarkup(ARTICLE_TOKEN, true);
     return rebaseMarkup(html);
   }
@@ -2789,10 +2959,10 @@
     });
   }
 
-  function buildTemplateEditor(t) {
+  function buildTemplateEditor(t, kind) {
     var ro = !isEditor();
     var wrap = el("div", { "class": "tpl-edit" });
-    function setField(k, v) { t[k] = v; settingsEntry(t.id)[k] = v; settingsChanged(); }
+    function setField(k, v) { t[k] = v; settingsEntry(t.id, kind)[k] = v; settingsChanged(); }
 
     var form = el("div", { "class": "tpl-edit__form" }, [
       field("名前", t.label, function (v) { setField("label", v); renderTemplateList(); }),
@@ -2812,12 +2982,26 @@
         el("span", { text: " 1 号に 1 回だけ" })
       ])
     ]);
+    if (kind === "section") {
+      /* 記事側のページ数・目次・固定位置とは別の、セクションの設定。 */
+      while (form.children.length > 1) { form.lastChild.remove(); }
+      form.appendChild(el("label", { text: "記事の並べ方" }, [el("select", {
+        "aria-label": "記事の並べ方", onchange: function () { setField("layout", this.value); rebuildTemplates(); renderSettings(); }
+      }, [el("option", { value: "stack", text: "縦に並べる", selected: t.layout !== "columns" ? "selected" : null }),
+          el("option", { value: "columns", text: "横に並べる", selected: t.layout === "columns" ? "selected" : null })])]));
+      form.appendChild(el("label", { "class": "panel-check" }, [el("input", { type: "checkbox", checked: t.heading !== false ? "checked" : null,
+        onchange: function () { setField("heading", this.checked); rebuildTemplates(); renderSettings(); } }), el("span", { text: " 共通見出しを表示する" })]));
+      wrap.appendChild(el("div", { "class": "seg" }, [1, 2].map(function (count) {
+        return el("button", { type: "button", text: "記事 " + count + " 本の見本", "aria-pressed": (state.tplArticleCount || 1) === count ? "true" : "false",
+          onclick: function () { state.tplArticleCount = count; renderSettings(); } });
+      })));
+    }
     if (ro) { makeReadOnly(form); }
     wrap.appendChild(form);
 
     var kindMode = !ro && state.tplMode === "kind";
     var page = el("section", { "class": "page tpl-preview__page", "data-kind-mode": kindMode ? "true" : null });
-    page.innerHTML = '<div class="page__body">' + previewMarkup(t) + "</div>";
+    page.innerHTML = '<div class="page__body">' + previewMarkup(t, kind) + "</div>";
     markFixedParts(page, !ro && !kindMode);
 
     /* 直した見本を設定に書く。目印（data-fixed 等）は外し、画像の場所は
@@ -2825,8 +3009,11 @@
     function store() {
       var clone = $(".page__body", page).cloneNode(true);
       $$("[data-fixed]", clone).forEach(function (n) { n.removeAttribute("data-fixed"); n.removeAttribute("contenteditable"); });
-      var entry = settingsEntry(t.id);
+      var entry = settingsEntry(t.id, kind);
       if (!Array.isArray(entry.markup)) { entry.markup = []; }
+      if (kind === "section") {
+        $$("[data-section-articles]", clone).forEach(function (slot) { slot.innerHTML = ""; });
+      }
       entry.markup[0] = canonicalMarkup(clone.innerHTML);
       settingsChanged();
       rebuildTemplates();
@@ -2855,7 +3042,7 @@
       el("button", { type: "button", text: "定型／書く欄を切り替える", "aria-pressed": kindMode ? "true" : "false",
         onclick: function () { state.tplMode = "kind"; renderSettings(); } })
     ]);
-    var edited = state.settings.templates[t.id] && state.settings.templates[t.id].markup;
+    var edited = settingsMap(kind)[t.id] && settingsMap(kind)[t.id].markup;
     wrap.appendChild(el("div", { "class": "tpl-preview" }, [
       el("div", { "class": "panel-row" }, [el("div", { "class": "tpl-legend" }, [
         el("span", { "class": "tpl-legend__fixed", text: "定型（ここで直す）" }),
@@ -2868,7 +3055,7 @@
       (!ro && edited) ? el("button", { type: "button", "class": "article-card__sub", text: "見本を元に戻す",
         onclick: function () {
           if (!confirm("このテンプレートの見本を、system/page-templates.js の元の形に戻します。")) { return; }
-          delete state.settings.templates[t.id].markup;
+          delete settingsMap(kind)[t.id].markup;
           settingsChanged(); rebuildTemplates(); renderSettings();
         } }) : null,
       el("div", { "class": "tpl-preview__stage" }, [page])
@@ -2877,32 +3064,35 @@
   }
 
   function renderTemplateList(list) {
+    var kind = templateKind();
     list = list || $("#tpl-list");
     if (!list) { return; }
     list.innerHTML = "";
-    articleTemplates().forEach(function (t) {
+    templatesOf(kind).forEach(function (t) {
       list.appendChild(el("button", {
         type: "button", "class": "tpl-item", "aria-current": state.templateId === t.id ? "true" : "false",
         onclick: function () { state.templateId = t.id; renderSettings(); }
       }, [
         el("span", { "class": "tpl-item__name", text: t.label }),
         el("span", { "class": "tpl-item__meta",
-          text: (t.pages || 1) + "頁" + (t.fixed === "first" ? "・先頭" : t.fixed === "last" ? "・末尾" : "") + (t.toc ? "・目次" : "") })
+          text: kind === "section" ? (t.layout === "columns" ? "横並び" : "縦並び") : (t.pages || 1) + "頁" + (t.fixed === "first" ? "・先頭" : t.fixed === "last" ? "・末尾" : "") + (t.toc ? "・目次" : "") })
       ]));
     });
   }
 
   function buildTemplatesPane(body) {
-    if (!state.templateId || !findTemplateRaw(state.templateId)) { state.templateId = articleTemplates()[0].id; }
-    var t = findTemplateRaw(state.templateId);
-    var used = primaryArticles().filter(function (a) { return articleTemplate(a).id === t.id; }).length;
+    var kind = templateKind(), list = templatesOf(kind);
+    if (!state.templateId || !findTemplateRaw(state.templateId, kind)) { state.templateId = list[0].id; }
+    var t = findTemplateRaw(state.templateId, kind);
+    var used = kind === "section" ? sections().filter(function (section) { return section.template === t.id; }).length
+      : primaryArticles().filter(function (a) { return articleTemplate(a).id === t.id; }).length;
 
     var side = el("div", { "class": "tpl-side" }, [
       el("div", { id: "tpl-list", "class": "tpl-list" }),
       isEditor() ? el("button", { type: "button", "class": "panel-btn", text: "＋ 新しいテンプレート",
         onclick: function () {
-          var id = newId("custom-", function (x) { return !!findTemplateRaw(x); });
-          settingsEntry(id).label = "新しいテンプレート";
+          var id = newId("custom-", function (x) { return !!findTemplateRaw(x, kind); });
+          settingsEntry(id, kind).label = kind === "section" ? "新しいセクションテンプレート" : "新しい記事テンプレート";
           settingsChanged();
           rebuildTemplates();
           state.templateId = id;
@@ -2912,9 +3102,9 @@
     body.appendChild(side);
     body.appendChild(el("div", { "class": "settings-main" }, [
       el("h2", { text: t.label }),
-      el("p", { "class": "panel-note", text: "この号では " + used + " 本の記事でこのテンプレートを使っています。" +
+      el("p", { "class": "panel-note", text: "この号では " + used + (kind === "section" ? " セクション" : " 本の記事") + "でこのテンプレートを使っています。" +
         "直した内容は、次に作る紙面から反映されます（書き終えた原稿は書き換えません）。" }),
-      buildTemplateEditor(t)
+      buildTemplateEditor(t, kind)
     ]));
     renderTemplateList($(".tpl-list", side));
   }
@@ -3012,14 +3202,14 @@
   function renderSettings() {
     var old = $(".settings-view");
     if (old) { old.remove(); }
-    var tabs = [{ id: "templates", label: "テンプレート" }, { id: "members", label: "名簿" }];
+    var tabs = [{ id: "sectionTemplates", label: "セクションテンプレート" }, { id: "articleTemplates", label: "記事テンプレート" }, { id: "members", label: "名簿" }];
     var view = el("div", { "class": "settings-view" }, [
       el("div", { "class": "settings-head" }, [
         el("h1", { text: "設定" }),
         el("span", { "class": "panel-note", text: "この会報のひな型と、一緒に作業する人を管理します。" }),
         el("div", { "class": "seg" }, tabs.map(function (t) {
           return el("button", { type: "button", text: t.label, "aria-pressed": state.settingsTab === t.id ? "true" : "false",
-            onclick: function () { state.settingsTab = t.id; renderSettings(); } });
+            onclick: function () { state.settingsTab = t.id; state.templateId = null; renderSettings(); } });
         })),
         el("span", { "class": "editor-bar__spacer" }),
         el("span", { "class": "editor-bar__status kaiho-savestate", "data-dirty": "false" }),
@@ -3029,7 +3219,7 @@
     ]);
     var body = el("div", { "class": "settings-body" });
     if (state.settingsTab === "members") { buildMembersPane(body); } else { buildTemplatesPane(body); }
-    if (!isEditor() && state.settingsTab === "templates") {
+    if (!isEditor() && state.settingsTab !== "members") {
       body.insertBefore(lockNote("設定は編集長だけが変更できます。"), body.firstChild);
     }
     view.appendChild(body);
@@ -3149,13 +3339,13 @@
 
   function serializeSettings() {
     var s = JSON.parse(JSON.stringify(state.settings));
-    Object.keys(s.templates).forEach(function (id) {
-      if (!Object.keys(s.templates[id]).length) { delete s.templates[id]; }
+    ["sectionTemplates", "articleTemplates"].forEach(function (key) {
+      Object.keys(s[key]).forEach(function (id) { if (!Object.keys(s[key][id]).length) { delete s[key][id]; } });
     });
     return "/* 会報ごとの設定（会報スタジオの ⚙ 設定が書き出す）。\n" +
            "   members: 名簿。role は editor（編集長）/ staff（担当者）/ viewer（閲覧者）。\n" +
            "            pass は合言葉の SHA-256（名前と組）。平文を書かないこと。\n" +
-           "   templates: page-templates.js の上書き。markup[0] は 1 ページ目の見本。\n" +
+           "   sectionTemplates / articleTemplates: 種類別の型の上書き。markup[0] は見本。\n" +
            "   手で直すときは JSON として正しい形を保つこと。 */\n" +
            "window.KAIHO_SETTINGS = " + JSON.stringify(s, null, 2) + ";\n";
   }
@@ -3546,6 +3736,7 @@
 
   function init() {
     state.meta = readMeta();
+    migrateSectionDOM();
     /* 読み込み時の読み替え（旧形式 → 新形式）だけでは「未保存」にしない。
        開いただけで差分が出るのは事故のもと。次に本当に直したときに一緒に書く */
     state.metaText = JSON.stringify(state.meta, null, 2);

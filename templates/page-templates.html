@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>記事テンプレート見本帳</title>
+<title>セクション・記事テンプレート見本帳</title>
 <link rel="stylesheet" href="../system/tokens.css">
 <link rel="stylesheet" href="../brands/default/brand.css">
 <link rel="stylesheet" href="../system/print.css">
@@ -75,7 +75,8 @@
 
 <div class="tmpl-intro">
   <p class="t-lead">
-    編集計画の記事が選ぶ「記事テンプレート」の一覧です。
+    セクションの共通見出し・並べ方と、各記事の雛型を別々に紹介します。
+    セクションは記事1本・2本の見本を並べています。
     各テンプレートの見出し・諸元の直後に、実際に組み上がる紙面をそのまま並べています。
     ここに無いテンプレートは存在しません（system/page-templates.js を追加・変更したら
     必ずこの見本帳が最新のテンプレートを表示することを確認してください）。
@@ -176,6 +177,27 @@
         "window.KAIHO_ARTICLE_TEMPLATES が空です。system/page-templates.js が正しく読み込まれているか確認してください。" }));
       return;
     }
+
+    (window.KAIHO_SECTION_TEMPLATES || []).forEach(function (section) {
+      [1, 2].forEach(function (count) {
+        var note = el("div", { "class": "tmpl-note" });
+        note.appendChild(el("span", { "class": "tmpl-note__label", text: section.label + "：記事" + count + "本" }));
+        note.appendChild(el("span", { "class": "tmpl-note__spec", text: "セクション / " + section.id + " / " + (section.layout === "columns" ? "横並び" : "縦並び") }));
+        root.appendChild(note);
+        var page = buildPage(section, 0), node = $("[data-section]", page);
+        node.setAttribute("data-layout", section.layout);
+        var slot = $("[data-section-articles]", node);
+        for (var j = 0; j < count; j++) {
+          var holder = el("div");
+          holder.innerHTML = templates.find(function (t) { return t.id === "free"; }).markup(section.id + "-article-" + j, 0);
+          var article = $("[data-article]", holder);
+          article.classList.add("article--block", "article--rest");
+          $("[data-editable]", article).textContent = "記事" + (j + 1) + "の見出し";
+          slot.appendChild(article);
+        }
+        root.appendChild(page);
+      });
+    });
 
     templates.forEach(function (tmpl) {
       root.appendChild(buildNote(tmpl));

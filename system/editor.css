@@ -909,6 +909,9 @@
   .article-card__sub:hover { background: #414751; }
 
   /* 計画の工程の「ページの増減」行 */
+  .page-section-card { margin-top: 12px; padding: 12px; border-left: 3px solid #81b9e6; background: #252d37; border-radius: 6px; }
+  .settings-head .seg { flex-wrap: wrap; }
+  .settings-head .seg button { white-space: normal; }
   .page-assign { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
   .page-order-card .page-assign { margin-top: 12px; }
   .page-order-card .page-tools__pick { width: 100%; max-width: none; min-width: 0; }

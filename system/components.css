@@ -289,6 +289,17 @@ figcaption {
    .article--block と同じ要素に付くので、並び順に頼らず詳細度で上書きする。 */
 .article--block.article--rest { flex: 1 1 auto; min-height: 0; }
 
+/* ページ → セクション → 記事。見出しを除いた領域を記事が分け合う。 */
+.content-section { display: flex; flex-direction: column; flex: 0 0 var(--section-share, 100%); min-height: 0; }
+.content-section__title { flex: 0 0 auto; margin-bottom: var(--sp-3); }
+.content-section__articles { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.content-section[data-layout="columns"] > .content-section__articles { flex-direction: row; gap: var(--sp-3); }
+.content-section[data-layout="columns"] > .content-section__articles > .article--block { flex: 1 1 0; min-width: 0; }
+/* 移行した原稿は元のページ直下のレイアウトを保つ。 */
+.content-section--legacy, .content-section--legacy > .content-section__articles { display: contents; }
+.content-section--legacy.content-section--allocated { display: flex; }
+.content-section--legacy.content-section--allocated > .content-section__articles { display: flex; }
+
 /* ==========================================================================
    7. 制作情報スラグ（要件13）
    --------------------------------------------------------------------------
