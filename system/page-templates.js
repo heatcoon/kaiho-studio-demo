@@ -285,7 +285,7 @@
           '    <p>編集を終えての一言をここに。</p>\n' +
           '  </div>\n' +
           '  <footer class="colophon" data-editable>\n' +
-          '    <p><strong>会報タイトル　第00号</strong>　2026年1月発行</p>\n' +
+          '    <p><strong>会報タイトル　第00号</strong>　2026年1月発行<span data-edition="auto">　初版</span></p>\n' +
           '    <p>発行：団体名　／　編集：広報委員会</p>\n' +
           '    <p>〒000-0000　住所<br>\n' +
           '       電話 000-000-0000　／　mail@example.org</p>\n' +
@@ -328,7 +328,7 @@
           '    <p>次号もお楽しみに。ご意見・ご感想をお待ちしています。</p>\n' +
           '  </div>\n' +
           '  <footer class="colophon" data-editable>\n' +
-          '    <p><strong>会報タイトル　第00号</strong>　2026年1月発行</p>\n' +
+          '    <p><strong>会報タイトル　第00号</strong>　2026年1月発行<span data-edition="auto">　初版</span></p>\n' +
           '    <p>発行：団体名　／　編集：広報委員会</p>\n' +
           '    <p>〒000-0000　住所<br>\n' +
           '       電話 000-000-0000　／　mail@example.org</p>\n' +

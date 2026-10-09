@@ -123,6 +123,7 @@
 
   var DEFAULT_META = {
     issue: "",
+    edition: 1,  /* 発行・再印刷の版。保存回数では増やさない */
     date: "",
     format: "A4",
     /* 原稿・初校・再校は記事の締切の既定値、final は号の入校日（決定 1-a） */
@@ -291,6 +292,7 @@
         console.warn("[kaiho] #kaiho-meta の JSON を解釈できませんでした:", e);
       }
     }
+    if (!Number.isSafeInteger(meta.edition) || meta.edition < 1) { meta.edition = 1; }
     if (!meta.schedule) { meta.schedule = {}; }
     if (!meta.editor) { meta.editor = { name: "", contact: "" }; }
     if (!meta.plan) { meta.plan = { frames: [], articles: [] }; }
@@ -1576,6 +1578,7 @@
     checkAccessibility();
     renderChecks();
     renderToc();
+    renderEdition();
     return findings;
   }
 
@@ -2534,6 +2537,7 @@
   function buildMetaForm(container) {
     container.appendChild(el("h2", { text: "号の情報" }));
     container.appendChild(issueNameField());
+    container.appendChild(issueEditionField());
     container.appendChild(field("発行日", state.meta.date, function (v) { state.meta.date = v; syncMeta(); }, "date"));
 
     container.appendChild(el("h2", { text: "編集責任者" }));
@@ -2885,7 +2889,7 @@
     document.body.appendChild(el("section", { "class": "plan-sheet" }, [
       el("header", { "class": "plan-sheet__head" }, [
         el("h1", { text: "編集計画（台割）" }),
-        el("p", { text: [state.meta.issue, state.meta.date ? "発行 " + state.meta.date : "",
+        el("p", { text: [state.meta.issue, editionLabel(), state.meta.date ? "発行 " + state.meta.date : "",
           "全 " + (plannedTotal() || pages().length) + " ページ",
           "入校日 " + (state.meta.schedule[FINAL_STAGE_ID] || "未設定"),
           "校了 " + sc.done + "/" + sc.total,
@@ -3219,6 +3223,44 @@
     return control;
   }
 
+  function editionLabel() { return state.meta.edition === 1 ? "初版" : "第" + state.meta.edition + "版"; }
+
+  function setEdition(value) {
+    if (!Number.isSafeInteger(value) || value < 1 || value === state.meta.edition) { return; }
+    state.meta.edition = value;
+    /* 発行済みなのは前の版。新しい版は改めて入稿・発行を確認する。 */
+    state.meta.released = false;
+    $$("[data-edition-input]").forEach(function (input) { input.value = String(value); });
+    $$("[data-edition-label]").forEach(function (label) { label.textContent = editionLabel(); });
+    renderEdition(); syncMeta(); updateStatusBits();
+  }
+
+  function issueEditionField() {
+    var input = el("input", { type: "number", min: "1", max: String(Number.MAX_SAFE_INTEGER), step: "1", required: "required", value: state.meta.edition,
+      "data-edition-input": "true", oninput: function () { if (this.validity.valid) { setEdition(this.valueAsNumber); } } });
+    return el("div", { "class": "issue-edition" }, [
+      el("label", { text: "版数" }, [input]),
+      el("span", { "data-edition-label": "true", "aria-live": "polite", text: editionLabel() }),
+      el("button", { type: "button", "class": "panel-btn", text: "次の版にする", onclick: function () { setEdition(state.meta.edition + 1); } })
+    ]);
+  }
+
+  /* 奥付の版表示は号の情報から作る。住所や発行日などの既存原稿には触れない。 */
+  function renderEdition() {
+    pages().forEach(function (page) {
+      $$(".colophon", page).forEach(function (footer) {
+        var target = $("[data-edition]", footer);
+        if (!target) {
+          target = el("span", { "data-edition": "auto" });
+          ($("p", footer) || footer).appendChild(target);
+        }
+        var text = "　" + editionLabel();
+        if (target.textContent !== text) { target.textContent = text; }
+        target.setAttribute("contenteditable", "false");
+      });
+    });
+  }
+
   function renderSettings() {
     var old = $(".settings-view");
     var scrollTop = old && old.getAttribute("data-tab") === state.settingsTab ? $(".settings-scroll", old).scrollTop : 0;
@@ -3240,6 +3282,7 @@
     ]);
     var identity = el("section", { "class": "settings-identity", "aria-label": "会報の基本情報" }, [
       issueNameField(),
+      issueEditionField(),
       el("p", { id: "kaiho-issue-name-help", "class": "panel-note", text: "会報名や号、用途などを自由に入力できます。例：〇〇会報 2026年5月号／2026年夏号" })
     ]);
     $("input", identity).setAttribute("aria-describedby", "kaiho-issue-name-help");
@@ -3491,8 +3534,10 @@
   }
 
   function save() {
+    var invalidEdition = $$('[data-edition-input]').find(function (input) { return !input.disabled && input.getClientRects().length && !input.validity.valid; });
+    if (invalidEdition) { invalidEdition.reportValidity(); return; }
     if (!anyDirty()) { showBarToast("保存する変更はありません"); return; }
-    syncMeta();
+    syncMeta(); renderEdition();
     var jobs = [];
     if (state.dirty.issue) { jobs.push({ kind: "issue", url: location.href, text: serialize(), type: "text/html" }); }
     if (state.dirty.comments) { jobs.push({ kind: "comments", url: new URL(commentsFileName(), location.href).href, text: serializeComments(), type: "text/javascript" }); }
@@ -3737,7 +3782,7 @@
 
   function updateStatusBits() {
     var issue = $("#kaiho-issue");
-    if (issue) { issue.textContent = state.meta.issue || ""; }
+    if (issue) { issue.textContent = (state.meta.issue ? state.meta.issue + " / " : "") + editionLabel(); }
     renderStepBar();
   }
 
