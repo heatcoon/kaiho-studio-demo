@@ -931,6 +931,7 @@
         [el("option", { value: "", text: "新しい記事として足す" })].concat(choices.map(function (a) {
           return el("option", { value: a.id, text: displayTitleOf(a) });
         })));
+      tools.appendChild(pageActions(page));
       tools.appendChild(pick);
       tools.appendChild(el("button", {
         type: "button", "class": "page-tools__add", text: "＋ 記事",
@@ -1121,12 +1122,63 @@
     page.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  function removeLastPage() {
-    var list = pages();
-    if (list.length <= MIN_PAGES) { return; }
-    if (!confirm("最終ページ（p." + list.length + "）を削除します。\n中に書いた原稿も一緒に消えます。")) { return; }
-    list[list.length - 1].remove();
+  /* 紙面の順序だけを変更する。記事の計画と原稿はそのまま保持する。 */
+  function changePage(page, action, source) {
+    if (!isEditor() || state.step !== "plan") { return; }
+    var list = pages(), index = list.indexOf(page);
+    if (index < 0) { return; }
+    if (action === "delete") {
+      if (list.length <= MIN_PAGES) { return; }
+      if (!confirm("p." + (index + 1) + " を削除します。\nこのページの原稿も消えます。記事の計画は残ります。")) { return; }
+    } else if ((action === "previous" && index === 0) || (action === "next" && index === list.length - 1)) {
+      return;
+    }
+    if (document.activeElement && document.activeElement.blur) { document.activeElement.blur(); }
+    if (action === "delete") { page.remove(); }
+    else if (action === "previous") { page.parentNode.insertBefore(page, list[index - 1]); }
+    else { insertAfterNode(page, list[index + 1]); }
     afterPagesChanged();
+    var target = action === "delete" ? pages()[Math.min(index, pages().length - 1)] : page;
+    var scope = source === "paper" ? $(".page-tools", target)
+      : $$('.page-order-card')[pages().indexOf(target)];
+    if (scope) {
+      var button = $('[data-page-action="' + action + '"]:not(:disabled)', scope)
+        || $('button:not(:disabled)', scope);
+      if (button) { button.focus({ preventScroll: true }); }
+    }
+  }
+
+  function pageActions(page, source) {
+    var index = pages().indexOf(page), count = pages().length;
+    return el("div", { "class": "page-actions", "aria-label": "p." + (index + 1) + " の操作" }, [
+      ["previous", "前に移動", index === 0],
+      ["next", "後ろに移動", index === count - 1],
+      ["delete", "削除", count <= MIN_PAGES]
+    ].map(function (item) {
+      return el("button", { type: "button", text: item[1], "data-page-action": item[0],
+        "aria-label": "p." + (index + 1) + " を" + item[1],
+        disabled: item[2] ? "disabled" : null,
+        onclick: function () { changePage(page, item[0], source || "paper"); }
+      });
+    }));
+  }
+
+  function buildPageOrder() {
+    var list = el("div", { "class": "page-order" }, [el("p", { "class": "panel-note",
+      text: "ページは末尾に追加します。並べ替えるとページ番号も更新されます。削除しても記事の計画は残ります。" })]);
+    pages().forEach(function (page, index) {
+      var titles = [], ids = [];
+      $$("[data-article]", page).forEach(function (node) {
+        var id = node.getAttribute("data-article"), a = articleById(id);
+        if (ids.indexOf(id) < 0) { ids.push(id); titles.push(a ? displayTitleOf(a) : id); }
+      });
+      list.appendChild(el("div", { "class": "page-order-card" }, [
+        el("strong", { text: "p." + (index + 1) }),
+        el("div", { "class": "page-order-title", text: titles.join("／") || "空のページ" }),
+        pageActions(page, "panel")
+      ]));
+    });
+    return list;
   }
 
   /* ページに記事の入れ物を 1 つ足す。
@@ -2085,6 +2137,9 @@
     var s1 = section("号の設定", false, [meta], "sec-meta");
     var s2 = section("枠・記事・担当", true, [plan], "sec-plan");
     if (!isEditor()) { makeReadOnly(s1); makeReadOnly(s2); }
+    var pageSection = section("ページの並び・削除", true, [buildPageOrder()], "sec-pages");
+    if (!isEditor()) { makeReadOnly(pageSection); }
+    content.appendChild(pageSection);
     content.appendChild(s1);
     content.appendChild(s2);
 
@@ -2173,11 +2228,8 @@
         text: "予定 " + planned + " ページ／紙面 " + actual + " ページ" }),
       el("button", { type: "button", "class": "panel-btn", text: "不足しているページを作る", onclick: syncPagesToPlan }),
       el("button", { type: "button", "class": "panel-btn", text: "＋ 頁",
-        title: "ページを 1 枚足し、新しい記事として計画に登録する",
-        disabled: actual >= MAX_PAGES ? "disabled" : null, onclick: addPage }),
-      el("button", { type: "button", "class": "panel-btn", text: "− 頁",
-        title: "最終ページを削除する（中の原稿も消えます）",
-        disabled: actual <= MIN_PAGES ? "disabled" : null, onclick: removeLastPage })
+        title: "末尾にページを 1 枚足し、新しい記事として計画に登録する",
+        disabled: actual >= MAX_PAGES ? "disabled" : null, onclick: addPage })
     ]));
     container.appendChild(el("p", { "class": "panel-note",
       text: "総ページ数は枠の占有ページ数の合計です。1 ページに複数の記事を載せるときは、同じ枠に記事を足して割合を決めます。" }));
